@@ -1,0 +1,36 @@
+
+Namespace(AugDirect=1, CustomizeMask=False, MakeImbalance=True, alpha=0.1, data_path='../dataset/data/tmp/', dataset='WebKB/Cornell', debug=False, dropout=0.0, epoch=900, epochs=1500, feat_dim=64, gdc='ppr', imb_ratio=100, l2=0.0005, layer=2, log_path='test', log_root='../logs/', lr=0.005, max=False, method_name='DiG', n_layer=2, net='GCN', new_setting=False, no_mask=False, num_filter=2, p_inter=0.1, p_q=0.95, randomseed=-1, seed=0, tau=2, warmup=5, withAug=True)
+Num of bidrected edges: 18, total num of edges: 298
+This is directed graph:  True
+data_x torch.Size([183, 1703])
+splits 10
+val_acc: 0.644 test_acc: 0.541 val_acc_latest: 0.678 test_acc_latest: 0.486  
+val_acc: 0.576 test_acc: 0.595 val_acc_latest: 0.678 test_acc_latest: 0.595
+val_acc: 0.559 test_acc: 0.568 val_acc_latest: 0.424 test_acc_latest: 0.595
+val_acc: 0.22 test_acc: 0.189 val_acc_latest: 0.559 test_acc_latest: 0.649
+val_acc: 0.525 test_acc: 0.622 val_acc_latest: 0.475 test_acc_latest: 0.541
+val_acc: 0.627 test_acc: 0.622 val_acc_latest: 0.61 test_acc_latest: 0.514
+val_acc: 0.475 test_acc: 0.622 val_acc_latest: 0.305 test_acc_latest: 0.514
+val_acc: 0.39 test_acc: 0.459 val_acc_latest: 0.339 test_acc_latest: 0.378
+val_acc: 0.661 test_acc: 0.595 val_acc_latest: 0.508 test_acc_latest: 0.432
+val_acc: 0.508 test_acc: 0.541 val_acc_latest: 0.492 test_acc_latest: 0.541
+
+Namespace(AugDirect=1, CustomizeMask=False, MakeImbalance=True, alpha=0.1, data_path='../dataset/data/tmp/', dataset='WebKB/Cornell', debug=False, dropout=0.0, epoch=900, epochs=1500, feat_dim=64, gdc='ppr', imb_ratio=100, l2=0.0005, layer=2, log_path='test', log_root='../logs/', lr=0.005, max=False, method_name='DiG', n_layer=2, net='GCN', new_setting=False, no_mask=False, num_filter=2, p_inter=0.1, p_q=0.95, randomseed=-1, seed=0, tau=2, warmup=5, withAug=False)
+2023-11-18 12:18:11.628941: E tensorflow/stream_executor/cuda/cuda_driver.cc:271] failed call to cuInit: CUDA_ERROR_NO_DEVICE: no CUDA-capable device is detected
+2023-11-18 12:18:11.628969: I tensorflow/stream_executor/cuda/cuda_diagnostics.cc:156] kernel driver does not appear to be running on this host (qin-omen): /proc/driver/nvidia/version does not exist
+2023-11-18 12:18:11.629246: I tensorflow/core/platform/cpu_feature_guard.cc:142] This TensorFlow binary is optimized with oneAPI Deep Neural Network Library (oneDNN) to use the following CPU instructions in performance-critical operations:  AVX2 FMA
+To enable them in other operations, rebuild TensorFlow with the appropriate compiler flags.
+Num of bidrected edges: 18, total num of edges: 298
+This is directed graph:  True
+data_x torch.Size([183, 1703])
+splits 10
+val_acc: 0.237 test_acc: 0.135 val_acc_latest: 0.661 test_acc_latest: 0.486
+val_acc: 0.576 test_acc: 0.595 val_acc_latest: 0.576 test_acc_latest: 0.514
+val_acc: 0.559 test_acc: 0.568 val_acc_latest: 0.542 test_acc_latest: 0.622
+val_acc: 0.492 test_acc: 0.405 val_acc_latest: 0.559 test_acc_latest: 0.568
+val_acc: 0.525 test_acc: 0.622 val_acc_latest: 0.525 test_acc_latest: 0.622
+val_acc: 0.644 test_acc: 0.622 val_acc_latest: 0.576 test_acc_latest: 0.595
+val_acc: 0.492 test_acc: 0.676 val_acc_latest: 0.458 test_acc_latest: 0.541
+val_acc: 0.186 test_acc: 0.135 val_acc_latest: 0.492 test_acc_latest: 0.595
+val_acc: 0.661 test_acc: 0.595 val_acc_latest: 0.559 test_acc_latest: 0.459
+val_acc: 0.492 test_acc: 0.514 val_acc_latest: 0.475 test_acc_latest: 0.541
