@@ -1,3 +1,11 @@
 For the present, can only run DigraphBen.py, which is Digraph+GraphSHA
 
-Run other .py, only get No augmentation results.
+(1) changing default in def parse_args():,
+for example:
+parser.add_argument('--withAug', type=bool, default=False, help='with Aug or not')
+
+(2) Run DigraphBen.py
+if args.withAug is default as True, the result is DiGraph+ dataset imbalancelized + GraphSHA
+else, the result is DiGraph+ dataset imbalancelized + without GraphSHA
+
+Run other .py, only get results: model + original dataset( without imbalancelized) + without GraphSHA

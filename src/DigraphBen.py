@@ -63,7 +63,7 @@ def parse_args():
 
     parser.add_argument('--alpha', type=float, default=0.1, help='alpha teleport prob')
     parser.add_argument('--randomseed', type=int, default=-1, help='if set random seed in training')
-    parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
+    parser.add_argument('--withAug', type=bool, default=False, help='with Aug or not')
     parser.add_argument('--AugDirect', type=int, default=1, help='1 for one direction, 2 for bidirection aug edges')
     parser.add_argument('--imb_ratio', type=float, default=100, help='imbalance ratio')
     parser.add_argument('--net', type=str, choices=['GCN', 'GAT', 'SAGE'], default='GCN', help='GNN bachbone')
