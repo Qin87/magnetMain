@@ -18,18 +18,18 @@ for data in [
         log_path = 'Edge_'+data[:-1]
         for num_filter in [16, 32, 64]:
             for q in [0.01, 0.05, 0.1, 0.15, 0.2, 0.25]:
-                command = ('python Edge_MagNet.py ' 
-                            +' --dataset='+data
-                            +' --q='+str(q)
-                            +' --num_filter='+str(num_filter)
-                            +' --K=1'
-                            +' -d'
-                            +' --log_path='+str(log_path)
-                            +' --layer=2'
-                            +' --epochs='+epochs
-                            +' --drop_prob='+drop_prob
-                            +' --lr='+str(lr)
-                            +' -a')
+                command = ('python Edge_MagNet.py '
+                            + ' --dataset='+data
+                            + ' --q='+str(q)
+                            + ' --num_filter='+str(num_filter)
+                            + ' --K=1'
+                            + ' -d'
+                            + ' --log_path='+str(log_path)
+                            + ' --layer=2'
+                            + ' --epochs='+epochs
+                            + ' --drop_prob='+drop_prob
+                            + ' --lr='+str(lr)
+                            + ' -a')
                 print(command)
                 os.system(command)
 
@@ -86,25 +86,25 @@ for data in [
         
         log_path = 'Edge_'+data[:-1]+'_SAGE'
         for num_filter in [16, 32, 64]:
-                command = ('python Edge_SAGE.py ' 
-                            +' --dataset='+data
-                            +' --num_filter='+str(num_filter)
-                            +' --log_path='+str(log_path)
-                            +' --drop_prob='+drop_prob
-                            +' --lr='+str(lr)
-                            +' --epochs='+epochs)
-                print(command)
-                os.system(command)
-                command = ('python Edge_SAGE.py ' 
+            command = ('python Edge_SAGE.py '
                         +' --dataset='+data
                         +' --num_filter='+str(num_filter)
                         +' --log_path='+str(log_path)
-                        +' --epochs='+epochs
                         +' --drop_prob='+drop_prob
                         +' --lr='+str(lr)
-                        +' -tud')
-                print(command)
-                os.system(command)
+                        +' --epochs='+epochs)
+            print(command)
+            os.system(command)
+            command = ('python Edge_SAGE.py '
+                    +' --dataset='+data
+                    +' --num_filter='+str(num_filter)
+                    +' --log_path='+str(log_path)
+                    +' --epochs='+epochs
+                    +' --drop_prob='+drop_prob
+                    +' --lr='+str(lr)
+                    +' -tud')
+            print(command)
+            os.system(command)
         
         log_path = 'Edge_'+data[:-1]+'_GAT'
         for heads in [2, 4, 8]:

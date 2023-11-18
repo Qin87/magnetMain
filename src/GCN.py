@@ -24,6 +24,7 @@ from utils.symmetric_distochastic import desymmetric_stochastic
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="baseline--GCN")
 
@@ -51,10 +52,14 @@ def parse_args():
     parser.add_argument('-to_undirected', '-tud', action='store_true', help='if convert graph to undirecteds')
     parser.add_argument('--randomseed', type=int, default=-1, help='if set random seed in training')
     return parser.parse_args()
+
+
 def acc(pred, label, mask):
     correct = int(pred[mask].eq(label[mask]).sum().item())
     acc = correct / int(mask.sum())
     return acc
+
+
 def main(args):
     if args.randomseed > 0:
         torch.manual_seed(args.randomseed)
@@ -232,7 +237,7 @@ if __name__ == "__main__":
     if not args.new_setting:
         if args.dataset[:3] == 'syn':
             if args.dataset[4:7] == 'syn':
-                setting_dict = pk.load(open('./syn_settings.pk','rb'))
+                setting_dict = pk.load(open('syn_settings.pk', 'rb'))
                 dataset_name_dict = {
                     0.95:1, 0.9:4,0.85:5,0.8:6,0.75:7,0.7:8,0.65:9,0.6:10
                 }
@@ -267,7 +272,7 @@ if __name__ == "__main__":
             except ValueError:
                 pass
             args.lr = float(setting_dict_curr[setting_dict_curr.index('lr')+1])
-    if os.path.isdir(dir_name) == False:
+    if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
         except FileExistsError:

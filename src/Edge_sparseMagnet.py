@@ -21,6 +21,7 @@ from utils.Citation import load_citation_link
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="link prediction of MagNet")
     parser.add_argument('--log_root', type=str, default='../logs/', help='the path saving model.t7 and the training process')
@@ -51,11 +52,13 @@ def parse_args():
     parser.add_argument('--l2', type=float, default=5e-4, help='l2 regularizer')
     return parser.parse_args()
 
+
 def acc(pred, label):
     #print(pred.shape, label.shape)       
     correct = pred.eq(label).sum().item()
     acc = correct / len(pred)
     return acc
+
 
 def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     """Convert a scipy sparse matrix to a torch sparse tensor."""
@@ -65,6 +68,7 @@ def sparse_mx_to_torch_sparse_tensor(sparse_mx):
     values = torch.from_numpy(sparse_mx.data)
     shape = torch.Size(sparse_mx.shape)
     return torch.sparse.FloatTensor(indices, values, shape)
+
 
 def main(args): 
 
@@ -303,6 +307,7 @@ def main(args):
         torch.cuda.empty_cache()
 
     return results
+
 
 if __name__ == "__main__":
     args = parse_args()

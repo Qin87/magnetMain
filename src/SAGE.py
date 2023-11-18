@@ -57,10 +57,10 @@ def acc(pred, label, mask):
 def main(args):
     if args.randomseed > 0:
         torch.manual_seed(args.randomseed)
-    
+
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         try:
             os.makedirs(log_path)
         except FileExistsError:
@@ -82,7 +82,7 @@ def main(args):
     else:
         dataset = load_syn(args.data_path + args.dataset, None)
 
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         os.makedirs(log_path)
 
     data = dataset[0]
@@ -90,7 +90,7 @@ def main(args):
         data.edge_weight = None
     if args.to_undirected:
         data.edge_index = to_undirected(data.edge_index)
-        
+
     data.y = data.y.long()
     num_classes = (data.y.max() - data.y.min() + 1).detach().numpy()
     data = data.to(device)
@@ -98,13 +98,13 @@ def main(args):
     splits = data.train_mask.shape[1]
     if len(data.test_mask.shape) == 1:
         data.test_mask = data.test_mask.unsqueeze(1).repeat(1, splits)
-    
+
     results = np.zeros((splits, 4))
     for split in range(splits):
         log_str_full = ''
-        model = SAGEModel(data.x.size(-1), num_classes, filter_num=args.num_filter, 
+        model = SAGEModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
                             dropout=args.dropout, layer=args.layer).to(device)
-        
+
         #model = nn.DataParallel(graphmodel)
         opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
 
@@ -134,21 +134,21 @@ def main(args):
 
             outstrtrain = 'Train loss:, %.6f, acc:, %.3f,' % (train_loss.detach().item(), train_acc)
             #scheduler.step()
-            
+
             ####################
             # Validation
             ####################
             model.eval()
             test_loss, test_acc = 0.0, 0.0
-            
+
             out = model(data)
-            pred_label = out.max(dim = 1)[1]            
+            pred_label = out.max(dim = 1)[1]
 
             test_loss = F.nll_loss(out[data.val_mask[:,split]], data.y[data.val_mask[:,split]])
             test_acc = acc(pred_label, data.y, data.val_mask[:,split])
-            
+
             outstrval = ' Test loss:, %.6f, acc: ,%.3f,' % (test_loss.detach().item(), test_acc)
-            
+
             duration = "---, %.4f, seconds ---" % (time.time() - start_time)
             log_str = ("%d, / ,%d, epoch," % (epoch, args.epochs))+outstrtrain+outstrval+duration
             log_str_full += log_str + '\n'
@@ -178,7 +178,7 @@ def main(args):
         preds = model(data)
         pred_label = preds.max(dim = 1)[1]
         np.save(log_path + '/pred' + str(split), pred_label.to('cpu'))
-    
+
         acc_train = acc(pred_label, data.y, data.val_mask[:,split])
         acc_test = acc(pred_label, data.y, data.test_mask[:,split])
 
@@ -186,10 +186,10 @@ def main(args):
         model.eval()
         preds = model(data)
         pred_label = preds.max(dim = 1)[1]
-    
+
         np.save(log_path + '/pred_latest' + str(split), pred_label.to('cpu'))
-    
-    
+
+
         acc_train_latest = acc(pred_label, data.y, data.val_mask[:,split])
         acc_test_latest = acc(pred_label, data.y, data.test_mask[:,split])
 
@@ -230,7 +230,7 @@ if __name__ == "__main__":
     if not args.new_setting:
         if args.dataset[:3] == 'syn':
             if args.dataset[4:7] == 'syn':
-                setting_dict = pk.load(open('./syn_settings.pk','rb'))
+                setting_dict = pk.load(open('syn_settings.pk', 'rb'))
                 dataset_name_dict = {
                     0.95:1, 0.9:4,0.85:5,0.8:6,0.75:7,0.7:8,0.65:9,0.6:10
                 }
@@ -265,7 +265,7 @@ if __name__ == "__main__":
                 pass
             args.lr = float(setting_dict_curr[setting_dict_curr.index('lr')+1])
             args.to_undirected = (setting_dict_curr[setting_dict_curr.index('to_undirected')+1]=='True')
-    if os.path.isdir(dir_name) == False:
+    if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
         except FileExistsError:
@@ -273,4 +273,4 @@ if __name__ == "__main__":
     save_name = args.method_name + 'lr' + str(int(args.lr*1000)) + 'num_filters' + str(int(args.num_filter)) + 'tud' + str(args.to_undirected) + 'layer' + str(int(args.layer))
     args.save_name = save_name
     results = main(args)
-    np.save(dir_name+save_name, results)    
+    np.save(dir_name+save_name, results)

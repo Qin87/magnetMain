@@ -67,7 +67,7 @@ def main(args):
     
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         try:
             os.makedirs(log_path)
         except FileExistsError:
@@ -173,7 +173,7 @@ def main(args):
             pred_label = preds.max(dim = 1)[1]
 
             test_loss = criterion(preds[:,:,val_index], label[:,val_index])
-            test_acc = 1.0*((pred_label[:,val_index] == label[:,val_index])).sum().detach().item()/count
+            test_acc = 1.0 * (pred_label[:, val_index] == label[:, val_index]).sum().detach().item() / count
 
             outstrval = ' Test loss:, %.6f, acc:, %.3f,' % (test_loss.detach().item(), test_acc)
             
@@ -208,10 +208,10 @@ def main(args):
         np.save(log_path + '/pred' + str(split), pred_label.to('cpu'))
     
         count = np.sum(val_index)
-        acc_train = (1.0*((pred_label[:,val_index] == label[:,val_index])).sum().detach().item())/count
+        acc_train = (1.0 * (pred_label[:, val_index] == label[:, val_index]).sum().detach().item()) / count
 
         count = np.sum(test_index)
-        acc_test = (1.0*((pred_label[:,test_index] == label[:,test_index])).sum().detach().item())/count
+        acc_test = (1.0 * (pred_label[:, test_index] == label[:, test_index]).sum().detach().item()) / count
 
         model.load_state_dict(torch.load(log_path + '/model_latest'+str(split)+'.t7'))
         model.eval()
@@ -220,10 +220,10 @@ def main(args):
         np.save(log_path + '/pred_latest' + str(split), pred_label.to('cpu'))
     
         count = np.sum(val_index)
-        acc_train_latest = (1.0*((pred_label[:,val_index] == label[:,val_index])).sum().detach().item())/count
+        acc_train_latest = (1.0 * (pred_label[:, val_index] == label[:, val_index]).sum().detach().item()) / count
 
         count = np.sum(test_index)
-        acc_test_latest = (1.0*((pred_label[:,test_index] == label[:,test_index])).sum().detach().item())/count
+        acc_test_latest = (1.0 * (pred_label[:, test_index] == label[:, test_index]).sum().detach().item()) / count
 
         ####################
         # Save testing results
@@ -262,7 +262,7 @@ if __name__ == "__main__":
     if not args.new_setting:
         if args.dataset[:3] == 'syn':
             if args.dataset[4:7] == 'syn':
-                setting_dict = pk.load(open('./syn_settings.pk','rb'))
+                setting_dict = pk.load(open('syn_settings.pk', 'rb'))
                 dataset_name_dict = {
                     0.95:1, 0.9:4,0.85:5,0.8:6,0.75:7,0.7:8,0.65:9,0.6:10
                 }
@@ -301,7 +301,7 @@ if __name__ == "__main__":
                 pass
             args.lr = float(setting_dict_curr[setting_dict_curr.index('lr')+1])
             args.q = float(setting_dict_curr[setting_dict_curr.index('q')+1])
-    if os.path.isdir(dir_name) == False:
+    if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
         except FileExistsError:

@@ -19,6 +19,7 @@ import scipy
 import os
 from joblib import Parallel, delayed
 
+
 def sub_adj(edge_index, prob, seed):
     sub_train, sub_test = train_test_split(edge_index.T, test_size = prob, random_state=seed)
     sub_train, sub_val  = train_test_split(sub_train, test_size = 0.2, random_state=seed)
@@ -267,20 +268,86 @@ def generate_dataset_3class(edge_index, size, save_path, splits = 10, probs = [0
 # Copy from DiGCN
 # https://github.com/flyingtango/DiGCN
 #################################################################################
-def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype, edge_weight=None):
+# def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype, edge_weight=None):
+# I think edge_weight shouldn't be in the parameter. so I changes it.
+#     from torch_geometric.utils import add_remaining_self_loops, add_self_loops, remove_self_loops
+#     from torch_scatter import scatter_add
+#
+#     if edge_weight is None:
+#         edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
+#                                      device=edge_index.device)
+#     fill_value = 1
+#     edge_index, edge_weight = add_self_loops(edge_index.long(), edge_weight, fill_value, num_nodes)
+#     row, col = edge_index
+#     deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
+#     deg_inv = deg.pow(-1)
+#     deg_inv[deg_inv == float('inf')] = 0
+#     p = deg_inv[row] * edge_weight
+#
+#     # personalized pagerank p
+#     p_dense = torch.sparse.FloatTensor(edge_index, p, torch.Size([num_nodes,num_nodes])).to_dense()
+#     p_v = torch.zeros(torch.Size([num_nodes+1,num_nodes+1]))
+#     p_v[0:num_nodes,0:num_nodes] = (1-alpha) * p_dense
+#     p_v[num_nodes,0:num_nodes] = 1.0 / num_nodes
+#     p_v[0:num_nodes,num_nodes] = alpha
+#     p_v[num_nodes,num_nodes] = 0.0
+#     p_ppr = p_v
+#
+#     eig_value, left_vector = scipy.linalg.eig(p_ppr.numpy(),left=True,right=False)
+#     eig_value = torch.from_numpy(eig_value.real)
+#     left_vector = torch.from_numpy(left_vector.real)
+#     val, ind = eig_value.sort(descending=True)
+#
+#     pi = left_vector[:,ind[0]] # choose the largest eig vector
+#     pi = pi[0:num_nodes]
+#     p_ppr = p_dense
+#     pi = pi/pi.sum()  # norm pi
+#
+#     # Note that by scaling the vectors, even the sign can change. That's why positive and negative elements might get flipped.
+#     assert len(pi[pi<0]) == 0
+#
+#     pi_inv_sqrt = pi.pow(-0.5)
+#     pi_inv_sqrt[pi_inv_sqrt == float('inf')] = 0
+#     pi_inv_sqrt = pi_inv_sqrt.diag()
+#     pi_sqrt = pi.pow(0.5)
+#     pi_sqrt[pi_sqrt == float('inf')] = 0
+#     pi_sqrt = pi_sqrt.diag()
+#
+#     # L_appr  Ben__L is a matrix of n*n, non zero is edges, value of L is edge weight,
+#     L = (torch.mm(torch.mm(pi_sqrt, p_ppr), pi_inv_sqrt) + torch.mm(torch.mm(pi_inv_sqrt, p_ppr.t()), pi_sqrt)) / 2.0
+#
+#     # make nan to 0
+#     L[torch.isnan(L)] = 0
+#
+#     # transfer dense L to sparse
+#     L_indices = torch.nonzero(L,as_tuple=False).t()
+#     L_values = L[L_indices[0], L_indices[1]]
+#     edge_index = L_indices
+#     edge_weight = L_values
+#
+#     # row normalization
+#     row, col = edge_index
+#     deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
+#     deg_inv_sqrt = deg.pow(-0.5)
+#     deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+#
+#     return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+
+def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype):
     from torch_geometric.utils import add_remaining_self_loops, add_self_loops, remove_self_loops
     from torch_scatter import scatter_add
 
-    if edge_weight is None:
-        edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
+
+    edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
                                      device=edge_index.device)
     fill_value = 1
-    edge_index, edge_weight = add_self_loops(edge_index.long(), edge_weight, fill_value, num_nodes)  
+    edge_index, edge_weight = add_self_loops(edge_index.long(), edge_weight, fill_value, num_nodes)
     row, col = edge_index
-    deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes) 
-    deg_inv = deg.pow(-1) 
+    print(row.shape, edge_weight.shape, num_nodes)   # torch.Size([623]) torch.Size([623]) 222
+    deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
+    deg_inv = deg.pow(-1)
     deg_inv[deg_inv == float('inf')] = 0
-    p = deg_inv[row] * edge_weight 
+    p = deg_inv[row] * edge_weight
 
     # personalized pagerank p
     p_dense = torch.sparse.FloatTensor(edge_index, p, torch.Size([num_nodes,num_nodes])).to_dense()
@@ -289,7 +356,7 @@ def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype, edge_weight=None)
     p_v[num_nodes,0:num_nodes] = 1.0 / num_nodes
     p_v[0:num_nodes,num_nodes] = alpha
     p_v[num_nodes,num_nodes] = 0.0
-    p_ppr = p_v 
+    p_ppr = p_v
 
     eig_value, left_vector = scipy.linalg.eig(p_ppr.numpy(),left=True,right=False)
     eig_value = torch.from_numpy(eig_value.real)
@@ -311,7 +378,7 @@ def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype, edge_weight=None)
     pi_sqrt[pi_sqrt == float('inf')] = 0
     pi_sqrt = pi_sqrt.diag()
 
-    # L_appr
+    # L_appr  Ben__L is a matrix of n*n, non zero is edges, value of L is edge weight,
     L = (torch.mm(torch.mm(pi_sqrt, p_ppr), pi_inv_sqrt) + torch.mm(torch.mm(pi_inv_sqrt, p_ppr.t()), pi_sqrt)) / 2.0
 
     # make nan to 0
@@ -331,9 +398,8 @@ def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype, edge_weight=None)
 
     return edge_index, deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
 
-def get_second_directed_adj(edge_index, num_nodes, dtype, edge_weight=None):
-    if edge_weight is None:
-        edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
+def get_second_directed_adj(edge_index, num_nodes, dtype):
+    edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
                                      device=edge_index.device)
     fill_value = 1
     edge_index, edge_weight = add_self_loops(
@@ -412,7 +478,58 @@ def to_undirected(edge_index, edge_weight=None, num_nodes=None):
         edge_weight = torch.cat([edge_weight, edge_weight], dim=0)
     edge_index, edge_weight = coalesce(edge_index, edge_weight,  num_nodes, num_nodes)
 
-    return edge_index, edge_weight 
+    return edge_index, edge_weight
+
+def to_undirectedBen(edge_index, edge_weight=None, num_nodes=None):
+    """Converts the graph given by :attr:`edge_index` to an undirected graph,
+    so that :math:`(j,i) \in \mathcal{E}` for every edge :math:`(i,j) \in
+    \mathcal{E}`.
+    Args:
+        edge_index (LongTensor): The edge indices.
+        edge_weight (FloatTensor, optional): The edge weights.
+        num_nodes (int, optional): The number of nodes, *i.e.*
+            :obj:`max_val + 1` of :attr:`edge_index`. (default: :obj:`None`)
+    :rtype: (:class:`LongTensor`, :class:`Tensor`)
+    """
+    num_nodes = maybe_num_nodes(edge_index, num_nodes)
+
+    row, col = edge_index
+    row, col = torch.cat([row, col], dim=0), torch.cat([col, row], dim=0)
+    edge_index = torch.stack([row, col], dim=0)
+    # print(edge_index, edge_index.shape)
+
+    edges = [(edge_index[0][i].item(), edge_index[1][i].item()) for i in range(edge_index.shape[1])]
+    # print("Edges: ", edges)   # [(1, 90), (3, 163), (4, 8), (4, 25),
+
+    set_edges = set(edges)
+
+    unique_edges = list(set_edges)
+
+    num_list = [0]*len(edges)
+    history = []
+    count = 0
+    for i in range(len(edges)):
+        if edges[i] in history:
+           num_list[i] += 1
+           count += 1
+           # print("Duplicate: ", edges[i], num_list[i], count)
+        else:
+            history.append(edges[i])
+
+    edge_index0 = [i[0] for i in unique_edges]
+    edge_index1 = [i[1] for i in unique_edges]
+    edge_index = torch.tensor([edge_index0, edge_index1])
+    # print(edge_index, edge_index.shape)
+
+    return edge_index
+
+def remove_dupEdge(edge_index, edge_weight=None, num_nodes=None):
+
+    num_nodes = maybe_num_nodes(edge_index, num_nodes)
+
+    edge_index, edge_weight = coalesce(edge_index, edge_weight,  num_nodes, num_nodes)
+
+    return edge_index, edge_weight
 
 def link_prediction_evaluation(out_val, out_test, y_val, y_test):
     r"""Evaluates link prediction results.

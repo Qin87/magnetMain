@@ -2,7 +2,8 @@ import torch, math
 import torch.nn as nn
 import torch.nn.functional as F
 from torch_sparse import SparseTensor
-#from torch.nn import MultiheadAttention
+# from torch.nn import MultiheadAttention
+
 
 def process(mul_L_real, mul_L_imag, weight, X_real, X_imag):
     data = torch.spmm(mul_L_real, X_real)
@@ -15,6 +16,7 @@ def process(mul_L_real, mul_L_imag, weight, X_real, X_imag):
     data = torch.spmm(mul_L_real, X_imag)
     imag += torch.matmul(data, weight)
     return torch.stack([real, imag])
+
 
 class ChebConv(nn.Module):
     """
@@ -69,6 +71,7 @@ class ChebConv(nn.Module):
         imag = result[1]
         return real + self.bias, imag + self.bias
 
+
 class complex_relu_layer(nn.Module):
     def __init__(self, ):
         super(complex_relu_layer, self).__init__()
@@ -86,6 +89,7 @@ class complex_relu_layer(nn.Module):
 
         real, img = self.complex_relu(real, img)
         return real, img
+
 
 class ChebNet(nn.Module):
     def __init__(self, in_c, L_norm_real, L_norm_imag, num_filter=2, K=2, label_dim=2, activation=False, layer=2, dropout=False):
@@ -124,6 +128,7 @@ class ChebNet(nn.Module):
         x = self.Conv(x)
         x = F.log_softmax(x, dim=1)
         return x
+
 
 class ChebNet_Edge(nn.Module):
     def __init__(self, in_c, L_norm_real, L_norm_imag, num_filter=2, K=2, label_dim = 2, activation = False, layer = 2, dropout = False):

@@ -24,6 +24,7 @@ from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="baseline--Digraph")
 
@@ -51,10 +52,12 @@ def parse_args():
     parser.add_argument('--randomseed', type=int, default=-1, help='if set random seed in training')
     return parser.parse_args()
 
+
 def acc(pred, label, mask):
     correct = int(pred[mask].eq(label[mask]).sum().item())
     acc = correct / int(mask.sum())
     return acc
+
 
 def main(args):
     if args.randomseed > 0:
@@ -62,7 +65,7 @@ def main(args):
     
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         try:
             os.makedirs(log_path)
         except FileExistsError:
@@ -84,7 +87,7 @@ def main(args):
     else:
         dataset = load_syn(args.data_path + args.dataset, None)
 
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         os.makedirs(log_path)
 
     data = dataset[0]
@@ -92,6 +95,7 @@ def main(args):
         data.edge_weight = None
     else:
         data.edge_weight = torch.FloatTensor(data.edge_weight)
+    print("nnn,", data.edge_index.shape)   # nnn, torch.Size([2, 298])
     data.y = data.y.long()
     num_classes = (data.y.max() - data.y.min() + 1).detach().numpy()
     
@@ -100,32 +104,35 @@ def main(args):
     if len(data.test_mask.shape) == 1:
         data.test_mask = data.test_mask.unsqueeze(1).repeat(1, splits)
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, data.edge_index.long(), data.y.size(-1), data.x.dtype, data.edge_weight)
+    print("edge_index1", edge_index1.shape)
+    # print("edge_weight1", edge_weights1)
     edge_index1 = edge_index1.to(device)
     edge_weights1 = edge_weights1.to(device)
     if args.method_name[-2:] == 'ib':
         edge_index2, edge_weights2 = get_second_directed_adj(data.edge_index.long(), data.y.size(-1), data.x.dtype, data.edge_weight)
         edge_index2 = edge_index2.to(device)
         edge_weights2 = edge_weights2.to(device)
-        edges = (edge_index1, edge_index2)
+        SparseEdges = (edge_index1, edge_index2)
         edge_weight = (edge_weights1, edge_weights2)
         del edge_index2, edge_weights2
     else:
-        edges = edge_index1
+        SparseEdges = edge_index1
         edge_weight = edge_weights1
+    print("edge_weight", SparseEdges.shape, data.y.shape)
     del edge_index1, edge_weights1
     data = data.to(device)
     results = np.zeros((splits, 4))
     for split in range(splits):
         log_str_full = ''
         if not args.method_name[-2:] == 'ib':
-            graphmodel = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter, 
+            model = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
                                     dropout=args.dropout, layer=args.layer).to(device)
         else:
-            graphmodel = DiGCN_IB(data.x.size(-1), hidden=args.num_filter, 
+            model = DiGCN_IB(data.x.size(-1), hidden=args.num_filter,
                                     num_classes=num_classes, dropout=args.dropout,
                                     layer=args.layer).to(device)
-        model = graphmodel # nn.DataParallel(graphmodel)
         opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
+        # print("Hi, model: ", model, opt)
 
         #################################
         # Train/Validation/Test
@@ -137,11 +144,13 @@ def main(args):
             ####################
             # Train
             ####################
-            train_loss, train_acc = 0.0, 0.0
-
             # for loop for batch loading
             model.train()
-            out = model(data.x, edges, edge_weight)
+            # data_x = GraphSHA_Aug(data.x)
+            # print(data.x[0][:100], data.x.shape, SparseEdges.shape, edge_weight.shape)
+            # tensor([0., 0., 0.,  ..., 0., 0., 0.]) torch.Size([183, 1703]) torch.Size([2, 737]) torch.Size([737])
+            out = model(data.x, SparseEdges, edge_weight)
+            # print("out", out.shape, out)
 
             train_loss = F.nll_loss(out[data.train_mask[:,split]], data.y[data.train_mask[:,split]])
             pred_label = out.max(dim = 1)[1]
@@ -159,9 +168,7 @@ def main(args):
             # Validation
             ####################
             model.eval()
-            test_loss, test_acc = 0.0, 0.0
-            
-            out = model(data.x, edges, edge_weight)
+            out = model(data.x, SparseEdges, edge_weight)
             pred_label = out.max(dim = 1)[1]            
 
             test_loss = F.nll_loss(out[data.val_mask[:,split]], data.y[data.val_mask[:,split]])
@@ -196,7 +203,7 @@ def main(args):
         ####################
         model.load_state_dict(torch.load(log_path + '/model'+str(split)+'.t7'))
         model.eval()
-        preds = model(data.x, edges, edge_weight)
+        preds = model(data.x, SparseEdges, edge_weight)
         pred_label = preds.max(dim = 1)[1]
     
         np.save(log_path + '/pred' + str(split), pred_label.to('cpu'))
@@ -206,7 +213,7 @@ def main(args):
 
         model.load_state_dict(torch.load(log_path + '/model_latest'+str(split)+'.t7'))
         model.eval()
-        preds = model(data.x, edges, edge_weight)
+        preds = model(data.x, SparseEdges, edge_weight)
         pred_label = preds.max(dim = 1)[1]
     
         np.save(log_path + '/pred_latest' + str(split), pred_label.to('cpu'))
@@ -228,8 +235,10 @@ def main(args):
         torch.cuda.empty_cache()
     return results
 
+
 if __name__ == "__main__":
     args = parse_args()
+    print(args)
     if args.debug:
         args.epochs = 1
     if args.dataset[:3] == 'syn':
@@ -252,7 +261,7 @@ if __name__ == "__main__":
     if not args.new_setting:
         if args.dataset[:3] == 'syn':
             if args.dataset[4:7] == 'syn':
-                setting_dict = pk.load(open('./syn_settings.pk','rb'))
+                setting_dict = pk.load(open('syn_settings.pk', 'rb'))
                 dataset_name_dict = {
                     0.95:1, 0.9:4,0.85:5,0.8:6,0.75:7,0.7:8,0.65:9,0.6:10
                 }
@@ -290,7 +299,7 @@ if __name__ == "__main__":
                 args.layer = int(setting_dict_curr[setting_dict_curr.index('layer')+1])
             except ValueError:
                 pass
-    if os.path.isdir(dir_name) == False:
+    if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
         except FileExistsError:

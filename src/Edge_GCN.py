@@ -23,6 +23,7 @@ from utils.Citation import load_citation_link
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
 
+
 def parse_args():
     parser = argparse.ArgumentParser(description="link prediction baseline--GCN")
 
@@ -51,10 +52,12 @@ def parse_args():
     parser.add_argument('--l2', type=float, default=5e-4, help='l2 regularizer')
     return parser.parse_args()
 
+
 def acc(pred, label):
     correct = pred.eq(label).sum().item()
     acc = correct / len(pred)
     return acc
+
 
 def main(args): 
 
@@ -272,6 +275,7 @@ def main(args):
         torch.cuda.empty_cache()
     return results
 
+
 if __name__ == "__main__":
     args = parse_args()
     if args.debug:
@@ -283,7 +287,7 @@ if __name__ == "__main__":
     dir_name = os.path.join(os.path.dirname(os.path.realpath(
             __file__)), '../result_arrays',args.log_path,args.dataset+'/')
 
-    if os.path.isdir(dir_name) == False:
+    if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
         except FileExistsError:

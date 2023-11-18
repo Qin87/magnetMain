@@ -20,6 +20,7 @@ from torch_scatter import scatter_add
 import scipy
 from torch_geometric.data import Dataset
 
+
 def load_citation_link(root="./data"):
     g = load_npz_dataset(root)
     adj = g['A']
@@ -30,6 +31,7 @@ def load_citation_link(root="./data"):
     
     data = Data(x=values, edge_index=indices, edge_weight=None, y=None)
     return [data]
+
 
 def citation_datasets(root="./data", alpha=0.1, data_split = 10):
     # path = os.path.join(save_path, dataset)
@@ -69,6 +71,7 @@ def citation_datasets(root="./data", alpha=0.1, data_split = 10):
     data.test_mask  = torch.cat(masks['test'], axis=-1)
 
     return [data]
+
 
 def load_npz_dataset(file_name):
     """Load a graph from a Numpy binary file.
@@ -123,6 +126,7 @@ def load_npz_dataset(file_name):
             graph['idx_to_class'] = idx_to_class
 
         return graph
+
 
 def sample_per_class(random_state, labels, num_examples_per_class, forbidden_indices=None):
     num_samples = labels.shape[0]
@@ -214,6 +218,7 @@ def get_train_val_test_split(random_state,
 
     return train_indices, val_indices, test_indices
 
+
 def train_test_split(labels, seed, train_examples_per_class=None, val_examples_per_class=None, test_examples_per_class=None, train_size=None, val_size=None, test_size=None):
     random_state = np.random.RandomState(seed)
     train_indices, val_indices, test_indices = get_train_val_test_split(
@@ -237,6 +242,7 @@ def train_test_split(labels, seed, train_examples_per_class=None, val_examples_p
     mask['val'] = val_mask
     mask['test'] = test_mask
     return mask
+
 
 if __name__ == "__main__":
     data = citation_datasets(root="../../dataset/data/nips_data/cora_ml/raw/", dataset='cora_ml')

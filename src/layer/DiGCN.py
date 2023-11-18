@@ -13,6 +13,7 @@ from torch_geometric.utils import add_remaining_self_loops, add_self_loops
 from torch_geometric.utils import to_undirected, is_undirected
 from torch_geometric.nn.inits import glorot, zeros
 
+
 class DIGCNConv(MessagePassing):
     r"""The graph convolutional operator takes from Pytorch Geometric.
     The spectral operation is the same with Kipf's GCN.
@@ -32,7 +33,7 @@ class DIGCNConv(MessagePassing):
         **kwargs (optional): Additional arguments of
             :class:`torch_geometric.nn.conv.MessagePassing`.
     """
-    def __init__(self, in_channels, out_channels, improved=False, cached=True,
+    def __init__(self, in_channels, out_channels, improved=False, cached=False,
                  bias=True, **kwargs):
         super(DIGCNConv, self).__init__(aggr='add', **kwargs)
 
@@ -93,6 +94,7 @@ class DIGCNConv(MessagePassing):
         return '{}({}, {})'.format(self.__class__.__name__, self.in_channels,
                                    self.out_channels)
 
+
 class DiModel(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):
         super(DiModel, self).__init__()
@@ -124,6 +126,7 @@ class DiModel(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class DiGCNet(torch.nn.Module):
     def __init__(self, input_dim, out_dim, hidden, dropout = False):
         super(DiGCNet, self).__init__()
@@ -136,18 +139,32 @@ class DiGCNet(torch.nn.Module):
         self.conv1.reset_parameters()
         self.conv2.reset_parameters()
 
-    def forward(self, x, edge_index, index, edge_weight):
-        x = self.conv1(x, edge_index, edge_weight)
+    # def forward(self, x, edge_index, index, edge_weight):
+    #     x = self.conv1(x, edge_index, edge_weight)
+    #     x = F.relu(x)
+    #     x = self.conv2(x, edge_index, edge_weight)
+    #     x = F.relu(x)
+    #
+    #     x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+    #     if self.dropout > 0:
+    #         x = F.dropout(x, self.dropout, training=self.training)
+    #     x = self.linear(x)
+    #
+    #     return F.log_softmax(x, dim=1)
+
+    def forward(self, x, edge_index, index):
+        x = self.conv1(x, edge_index)
         x = F.relu(x)
-        x = self.conv2(x, edge_index, edge_weight)
+        x = self.conv2(x, edge_index)
         x = F.relu(x)
-        
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
 
         return F.log_softmax(x, dim=1)
+
 
 class InceptionBlock(torch.nn.Module):
     def __init__(self, in_dim, out_dim):
@@ -164,6 +181,7 @@ class InceptionBlock(torch.nn.Module):
         x1 = self.conv1(x, edge_index, edge_weight)
         x2 = self.conv2(x, edge_index2, edge_weight2)
         return x0, x1, x2
+
 
 class DiGCN_IB(torch.nn.Module):
     def __init__(self, num_features, hidden, num_classes, dropout=0.5, layer = 2):
@@ -195,6 +213,7 @@ class DiGCN_IB(torch.nn.Module):
         x = self.Conv(x)
         x = x.permute((0,2,1)).squeeze()
         return F.log_softmax(x, dim=1)
+
 
 class DiGCNet_IB(torch.nn.Module):
     def __init__(self, num_features, num_classes, hidden, dropout = False):

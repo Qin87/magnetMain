@@ -57,7 +57,7 @@ def main(args):
     
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         try:
             os.makedirs(log_path)
         except FileExistsError:
@@ -80,7 +80,7 @@ def main(args):
     else:
         dataset = load_syn(args.data_path + args.dataset, None)
 
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         os.makedirs(log_path)
 
     data = dataset[0]
@@ -264,7 +264,7 @@ if __name__ == "__main__":
             except ValueError:
                 pass
             args.lr = float(setting_dict_curr[setting_dict_curr.index('lr')+1])
-    if os.path.isdir(dir_name) == False:
+    if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
         except FileExistsError:

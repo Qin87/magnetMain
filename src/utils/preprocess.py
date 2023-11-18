@@ -9,7 +9,12 @@ from torch_geometric.utils import to_undirected
 from torch_geometric.datasets import WebKB, WikipediaNetwork
 
 #internel
-from utils.hermitian import *
+# import hermitian
+# from hermitian import *
+
+if __name__ == '__main__':
+    print("how can I quote hermitian")
+
 
 def load_cora(q, path = '../../dataset/cora/', save_pk = False, K = 1):
     #only graph structure without features
@@ -96,8 +101,9 @@ def load_raw_cora(q=0, path="../pygcn/data/cora/", dataset="cora", save_pk = Fal
 
 
 def load_syn(root, name = None):
+    print(root + '.pk', 'rb')
     data = pk.load(open(root + '.pk', 'rb'))
-    if os.path.isdir(root) == False:
+    if os.path.isdir(root) is False:
         try:
             os.makedirs(root)
         except FileExistsError:
@@ -124,7 +130,7 @@ def geometric_dataset(q, K, root='../dataset/data/tmp/', subset='Cornell', datas
     if load_only:
         return X, label, train_mask, val_mask, test_mask
     
-    if isinstance(q, list) == False:
+    if isinstance(q, list) is False:
         L, _, _ = hermitian_decomp(adj, q, norm=True, laplacian=laplacian, max_eigen = 2.0, gcn_appr = gcn_appr)
         multi_order_laplacian = cheb_poly(L, K)
     else:
@@ -136,7 +142,7 @@ def geometric_dataset(q, K, root='../dataset/data/tmp/', subset='Cornell', datas
         multi_order_laplacian = np.array(multi_order_laplacian).transpose((1,0,2,3))
     
     save_name = root+'/data'+str(q)+'_'+str(K)
-    if laplacian == False:
+    if laplacian is False:
         save_name += '_P'
     if save_pk:
         data = {}

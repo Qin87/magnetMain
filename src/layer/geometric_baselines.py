@@ -14,6 +14,7 @@ def pairwise_similar(x):
     return xx, torch.sum(xx, 1)+1e-8
 '''
 
+
 class APPNP_Link(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, alpha = 0.1, dropout = False, K=1):
         super(APPNP_Link, self).__init__()
@@ -43,6 +44,7 @@ class APPNP_Link(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class GIN_Link(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False):
         super(GIN_Link, self).__init__()
@@ -67,6 +69,7 @@ class GIN_Link(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class GCN_Link(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False):
         super(GCN_Link, self).__init__()
@@ -88,6 +91,7 @@ class GCN_Link(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class Cheb_Link(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, K, dropout = False):
         super(Cheb_Link, self).__init__()
@@ -108,6 +112,7 @@ class Cheb_Link(torch.nn.Module):
         x = self.linear(x)
 
         return F.log_softmax(x, dim=1)
+
 
 class SAGE_Link(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False):
@@ -131,6 +136,7 @@ class SAGE_Link(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class GAT_Link(torch.nn.Module):
     def __init__(self, input_dim, out_dim, heads, filter_num, dropout = False):
         super(GAT_Link, self).__init__()
@@ -151,6 +157,7 @@ class GAT_Link(torch.nn.Module):
         x = self.linear(x)
 
         return F.log_softmax(x, dim=1)
+
 
 '''
 ####################################################################
@@ -373,6 +380,8 @@ class GAT_Link(torch.nn.Module):
 ####################################################################
 # Node Classification Models
 ####################################################################
+
+
 class GATModel(torch.nn.Module):
     def __init__(self, input_dim, out_dim, heads, filter_num, dropout = False, layer=2):
         super(GATModel, self).__init__()
@@ -403,6 +412,7 @@ class GATModel(torch.nn.Module):
         x = x.permute((0,2,1)).squeeze()
 
         return F.log_softmax(x, dim=1)
+
 
 class SAGEModel(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):
@@ -437,6 +447,7 @@ class SAGEModel(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class GCNModel(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):
         super(GCNModel, self).__init__()
@@ -469,6 +480,7 @@ class GCNModel(torch.nn.Module):
         x = x.permute((0,2,1)).squeeze()
 
         return F.log_softmax(x, dim=1)
+
 
 class ChebModel(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, K, dropout = False, layer=2):
@@ -503,6 +515,7 @@ class ChebModel(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class APPNP_Model(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, alpha = 0.1, dropout = False, layer=3):
         super(APPNP_Model, self).__init__()
@@ -519,8 +532,8 @@ class APPNP_Model(torch.nn.Module):
 
         self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
 
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+    def forward(self, x, edge_index):
+        # x, edge_index = data.x, data.edge_index
 
         x = self.line1(x)
         x = self.conv1(x, edge_index)
@@ -543,6 +556,8 @@ class APPNP_Model(torch.nn.Module):
         x = x.permute((0,2,1)).squeeze()
 
         return F.log_softmax(x, dim=1)
+
+
 
 class GIN_Model(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):

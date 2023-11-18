@@ -1,3 +1,16 @@
+# DataSet
+'WebKB/Wisconsin'	 'WebKB/Texas' 		'WebKB/Cornell'   # tested Ok
+'WikipediaNetwork/chameleon', 'WikipediaNetwork/crocodile', 'WikipediaNetwork/squirrel'   
+# tested half ok
+# The dataset 'crocodile' is not available in case 'geom_gcn_preprocess=True'
+'WikiCS/'     # tested OK
+# must have /
+'syn/cyclic'        # failed, old version of PyG  load_syn
+'cora_ml/'       # tested OK
+'citeseer_npz/'   # tested OK
+
+
+
 # MagNet
 MagNet: A Neural Network for Directed Graphs
 
