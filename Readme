@@ -8,4 +8,4 @@ parser.add_argument('--withAug', type=bool, default=False, help='with Aug or not
 if args.withAug is default as True, the result is DiGraph+ dataset imbalancelized + GraphSHA
 else, the result is DiGraph+ dataset imbalancelized + without GraphSHA
 
-Run other .py, only get results: model + original dataset( without imbalancelized) + without GraphSHA
+Run other .py, only get results: model + original dataset( without imbalancelized) +without GraphSHA

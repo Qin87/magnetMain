@@ -6,7 +6,7 @@ from scipy.sparse import coo_matrix
 from torch_geometric.data import Data
 from torch import Tensor
 from torch_sparse import SparseTensor, coalesce
-from stellargraph.data import EdgeSplitter
+# from stellargraph.data import EdgeSplitter    # can't install Ben
 from sklearn.model_selection import train_test_split
 from torch_geometric.utils import negative_sampling, dropout_adj
 from torch_geometric.data import Data
