@@ -147,9 +147,9 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     """
     # Sort from major to minor
     n_data = torch.tensor(n_data)   # from list to tensor
-    print(n_data)
+    # print(n_data)
     sorted_n_data, indices = torch.sort(n_data, descending=True)
-    print(sorted_n_data, indices)   # tensor([341, 196, 196, 160, 138,  90,  87]) tensor([3, 2, 4, 0, 5, 1, 6])
+    # print(sorted_n_data, indices)   # tensor([341, 196, 196, 160, 138,  90,  87]) tensor([3, 2, 4, 0, 5, 1, 6])
     inv_indices = np.zeros(n_cls, dtype=np.int64)
     # print(inv_indices)      # [0 0 0 0 0 0 0]
     for i in range(n_cls):
