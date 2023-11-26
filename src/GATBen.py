@@ -13,12 +13,14 @@ import tqdm
 
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling
-# from gens import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling
-from layer.DiGCN import *
+# from layer.DiGCN import *
+from nets_graphSHA import *
 from src.ArgsBen import parse_args
 from src.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, generate_masks, keep_all_data
 from src.gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
 from src.neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
+from src.nets_graphSHA.gat import create_gat
+from src.nets_graphSHA.gcn import create_gcn
 from utils.Citation import *
 from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
@@ -186,13 +188,8 @@ def main(args):
                                                        device)
 
         log_str_full = ''
-        if not args.method_name[-2:] == 'ib':
-            model = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
-                                    dropout=args.dropout, layer=args.layer).to(device)
-        else:
-            model = DiGCN_IB(data.x.size(-1), hidden=args.num_filter,
-                                    num_classes=num_classes, dropout=args.dropout,
-                                    layer=args.layer).to(device)
+        model = create_gat(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                           nlayer=args.n_layer)    # change this when model changes
         opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
                                                                verbose=False)
@@ -390,7 +387,7 @@ def main(args):
             ####################
             model.eval()
             out = model(data.x, SparseEdges, edge_weight)
-            pred_label = out.max(dim = 1)[1]            
+            pred_label = out.max(dim = 1)[1]
 
             test_loss = F.nll_loss(out[data_val_mask], data_y[data_val_mask])
             # print("data_val_mask is not 0: ", data_val_mask.sum())
