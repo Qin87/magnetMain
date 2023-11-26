@@ -110,10 +110,9 @@ def main(args):
     results = np.zeros((splits, 4))
     for split in range(splits):
         log_str_full = ''
-        graphmodel = ChebModel(data.x.size(-1), num_classes, K=args.K, 
+        model = ChebModel(data.x.size(-1), num_classes, K=args.K,
                                 filter_num=args.num_filter, dropout=args.dropout,
                                 layer=args.layer).to(device)    
-        model = graphmodel # nn.DataParallel(graphmodel)
         opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
 
         #################################

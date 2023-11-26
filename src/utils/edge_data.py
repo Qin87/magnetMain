@@ -343,7 +343,7 @@ def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype):
     fill_value = 1
     edge_index, edge_weight = add_self_loops(edge_index.long(), edge_weight, fill_value, num_nodes)
     row, col = edge_index
-    print(row.shape, edge_weight.shape, num_nodes)   # torch.Size([623]) torch.Size([623]) 222
+    # print(row.shape, edge_weight.shape, num_nodes)   # torch.Size([623]) torch.Size([623]) 222
     deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
     deg_inv = deg.pow(-1)
     deg_inv[deg_inv == float('inf')] = 0

@@ -126,6 +126,57 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
 
     return new_edge_index
 
+def neighbor_sampling_BiEdge(total_node, edge_index, sampling_src_idx,
+                      neighbor_dist_list, train_node_mask=None):
+    """
+    add inverse edges based on GraphSHA
+    Neighbor Sampling - Mix adjacent node distribution and samples neighbors from it
+    Input:
+        total_node:         # of nodes; scalar
+        edge_index:         Edge index; [2, # of edges]
+        sampling_src_idx:   Source node index for augmented nodes; [# of augmented nodes]
+        sampling_dst_idx:   Target node index for augmented nodes; [# of augmented nodes]
+        neighbor_dist_list: Adjacent node distribution of whole nodes; [# of nodes, # of nodes]
+        prev_out:           Model prediction of the previous step; [# of nodes, n_cls]
+        train_node_mask:    Mask for not removed nodes; [# of nodes]
+    Output:
+        new_edge_index:     original edge index + sampled edge index
+        dist_kl:            kl divergence of target nodes from source nodes; [# of sampling nodes, 1]
+    """
+    ## Exception Handling ##
+    device = edge_index.device
+    sampling_src_idx = sampling_src_idx.clone().to(device)
+
+    # Find the nearest nodes and mix target pool
+    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+
+    # Compute degree
+    col = edge_index[1]
+    degree = scatter_add(torch.ones_like(col), col)
+    if len(degree) < total_node:
+        degree = torch.cat([degree, degree.new_zeros(total_node - len(degree))], dim=0)
+    if train_node_mask is None:
+        train_node_mask = torch.ones_like(degree, dtype=torch.bool)
+    degree_dist = scatter_add(torch.ones_like(degree[train_node_mask]), degree[train_node_mask]).to(device).type(
+        torch.float32)
+
+    # Sample degree for augmented nodes
+    prob = degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1)
+    aug_degree = torch.multinomial(prob, 1).to(device).squeeze(dim=1)  # (m)
+    max_degree = degree.max().item() + 1
+    aug_degree = torch.min(aug_degree, degree[sampling_src_idx])
+
+    # Sample neighbors
+    new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, max_degree)
+    tgt_index = torch.arange(max_degree).unsqueeze(dim=0).to(device)
+    new_col = new_tgt[(tgt_index - aug_degree.unsqueeze(dim=1) < 0)]
+    new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
+    new_row = new_row.repeat_interleave(aug_degree)
+    inv_edge_index = torch.stack([new_col, new_row], dim=0)
+    inv_edge_index_inverse = torch.stack([new_row, new_col], dim=0)
+    new_edge_index = torch.cat([edge_index, inv_edge_index, inv_edge_index_inverse], dim=1)
+
+    return new_edge_index
 
 def neighbor_sampling_bidegree(total_node, edge_index, sampling_src_idx,
                                neighbor_dist_list, train_node_mask=None):
@@ -345,7 +396,8 @@ def sampling_node_source(class_num_list, prev_out_local, idx_info_local, train_i
                 # print(f"Warning: idx_info_local[neighbor_cls[i]] has size 0.")   # happened
                 pass
         dst_idx = torch.tensor(dst_idx).to(src_idx.device)
-        new_src_idx = torch.tensor(dst_idx).to(src_idx.device)
+        # new_src_idx = torch.tensor(dst_idx).to(src_idx.device)
+        new_src_idx = torch.tensor(dst_idx, device=src_idx.device).clone().detach()
 
         src_idx_all.append(new_src_idx)
         dst_idx_all.append(dst_idx)
