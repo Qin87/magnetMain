@@ -111,7 +111,7 @@ def main(args):
         log_str_full = ''
         graphmodel = GCNModel(data.x.size(-1), num_classes, filter_num=args.num_filter, 
                                 dropout=args.dropout, layer=args.layer).to(device)    
-        model = graphmodel # nn.DataParallel(graphmodel)
+        model = graphmodel  # nn.DataParallel(graphmodel)
         opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
 
         #################################

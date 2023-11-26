@@ -15,6 +15,11 @@ def parse_args():
     parser.add_argument('--data_path', type=str, default='../dataset/data/tmp/',
                         help='data set folder, for default format see dataset/cora/cora.edges and cora.node_labels')
     parser.add_argument('--dataset', type=str, default='WebKB/Cornell', help='data set selection')
+    parser.add_argument('--undirect_dataset', type=str, choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
+                        default='CiteSeer', help='data set selection as GraphSHA')
+    # parser.add_argument('--dataset', type=str,
+    #                     choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
+    #                     default='CiteSeer', help='dataset name')
 
     parser.add_argument('--epochs', type=int, default=1500, help='training epochs')
     parser.add_argument('--num_filter', type=int, default=2, help='num of filters')
