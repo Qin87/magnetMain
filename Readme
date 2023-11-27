@@ -9,3 +9,13 @@ if args.withAug is default as True, the result is DiGraph+ dataset imbalancelize
 else, the result is DiGraph+ dataset imbalancelized + without GraphSHA
 
 Run other .py, only get results: model + original dataset( without imbalancelized) +without GraphSHA
+
+
+Directed Dataset options:
+WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
+'WikipediaNetwork/chameleon', 'WikipediaNetwork/crocodile', 'WikipediaNetwork/squirrel'     ---tested OK
+'WikiCS/'       ---tested OK
+'cora_ml/'     ---tested OK
+'citeseer_npz/'       ---tested OK
+***'dglCitation/'   ----tested fail
+

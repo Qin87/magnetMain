@@ -16,7 +16,7 @@ def pairwise_similar(x):
 
 
 class APPNP_Link(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, alpha = 0.1, dropout = False, K=1):
+    def __init__(self, input_dim, out_dim, filter_num, alpha=0.1, dropout=False, K=1):
         super(APPNP_Link, self).__init__()
         self.dropout = dropout
 
@@ -26,7 +26,7 @@ class APPNP_Link(torch.nn.Module):
         self.conv1 = APPNP(K=K, alpha=alpha)
         self.conv2 = APPNP(K=K, alpha=alpha)
 
-        self.linear = nn.Linear(filter_num*2, out_dim)     
+        self.linear = nn.Linear(filter_num * 2, out_dim)
 
     def forward(self, x, edge_index, index):
         x = self.line1(x)
@@ -37,7 +37,7 @@ class APPNP_Link(torch.nn.Module):
         x = self.conv2(x, edge_index)
         x = F.relu(x)
 
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
@@ -46,7 +46,7 @@ class APPNP_Link(torch.nn.Module):
 
 
 class GIN_Link(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, dropout = False):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False):
         super(GIN_Link, self).__init__()
         self.dropout = dropout
         self.line1 = nn.Linear(input_dim, filter_num)
@@ -54,15 +54,15 @@ class GIN_Link(torch.nn.Module):
 
         self.conv1 = GINConv(self.line1)
         self.conv2 = GINConv(self.line2)
-        self.linear = nn.Linear(filter_num*2, out_dim)     
+        self.linear = nn.Linear(filter_num * 2, out_dim)
 
     def forward(self, x, edge_index, index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
@@ -71,20 +71,20 @@ class GIN_Link(torch.nn.Module):
 
 
 class GCN_Link(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, dropout = False):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False):
         super(GCN_Link, self).__init__()
         self.dropout = dropout
         self.conv1 = GCNConv(input_dim, filter_num)
         self.conv2 = GCNConv(filter_num, filter_num)
-        self.linear = nn.Linear(filter_num*2, out_dim)     
+        self.linear = nn.Linear(filter_num * 2, out_dim)
 
     def forward(self, x, edge_index, index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
@@ -93,20 +93,20 @@ class GCN_Link(torch.nn.Module):
 
 
 class Cheb_Link(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, K, dropout = False):
+    def __init__(self, input_dim, out_dim, filter_num, K, dropout=False):
         super(Cheb_Link, self).__init__()
         self.dropout = dropout
         self.conv1 = ChebConv(input_dim, filter_num, K)
         self.conv2 = ChebConv(filter_num, filter_num, K)
-        self.linear = nn.Linear(filter_num*2, out_dim)     
+        self.linear = nn.Linear(filter_num * 2, out_dim)
 
     def forward(self, x, edge_index, index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
@@ -115,21 +115,21 @@ class Cheb_Link(torch.nn.Module):
 
 
 class SAGE_Link(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, dropout = False):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False):
         super(SAGE_Link, self).__init__()
         self.dropout = dropout
         self.conv1 = SAGEConv(input_dim, filter_num)
         self.conv2 = SAGEConv(filter_num, filter_num)
-        #self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
-        self.linear = nn.Linear(filter_num*2, out_dim)     
+        # self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
+        self.linear = nn.Linear(filter_num * 2, out_dim)
 
     def forward(self, x, edge_index, index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
@@ -138,20 +138,20 @@ class SAGE_Link(torch.nn.Module):
 
 
 class GAT_Link(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, heads, filter_num, dropout = False):
+    def __init__(self, input_dim, out_dim, heads, filter_num, dropout=False):
         super(GAT_Link, self).__init__()
         self.dropout = dropout
         self.conv1 = GATConv(input_dim, filter_num, heads=heads)
-        self.conv2 = GATConv(filter_num*heads, filter_num, heads=heads)
-        self.linear = nn.Linear(filter_num*heads*2, out_dim)     
+        self.conv2 = GATConv(filter_num * heads, filter_num, heads=heads)
+        self.linear = nn.Linear(filter_num * heads * 2, out_dim)
 
     def forward(self, x, edge_index, index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
         x = F.relu(x)
-        
-        x = torch.cat((x[index[:,0]], x[index[:,1]]), axis=-1)
+
+        x = torch.cat((x[index[:, 0]], x[index[:, 1]]), axis=-1)
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = self.linear(x)
@@ -377,21 +377,23 @@ class GAT_Link(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 '''
+
+
 ####################################################################
 # Node Classification Models
 ####################################################################
 
 
 class GATModel(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, heads, filter_num, dropout = False, layer=2):
+    def __init__(self, input_dim, out_dim, heads, filter_num, dropout=False, layer=2):
         super(GATModel, self).__init__()
         self.dropout = dropout
         self.conv1 = GATConv(input_dim, filter_num, heads=heads)
-        self.conv2 = GATConv(filter_num*heads, filter_num, heads=heads)
-        self.Conv = nn.Conv1d(filter_num*heads, out_dim, kernel_size=1)
+        self.conv2 = GATConv(filter_num * heads, filter_num, heads=heads)
+        self.Conv = nn.Conv1d(filter_num * heads, out_dim, kernel_size=1)
         self.layer = layer
         if layer == 3:
-            self.conv3 = GATConv(filter_num*heads, filter_num, heads=heads)
+            self.conv3 = GATConv(filter_num * heads, filter_num, heads=heads)
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -407,15 +409,15 @@ class GATModel(torch.nn.Module):
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = x.unsqueeze(0)
-        x = x.permute((0,2,1))
+        x = x.permute((0, 2, 1))
         x = self.Conv(x)
-        x = x.permute((0,2,1)).squeeze()
+        x = x.permute((0, 2, 1)).squeeze()
 
         return F.log_softmax(x, dim=1)
 
 
 class SAGEModel(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False, layer=2):
         super(SAGEModel, self).__init__()
         self.dropout = dropout
         self.conv1 = SAGEConv(input_dim, filter_num)
@@ -441,15 +443,15 @@ class SAGEModel(torch.nn.Module):
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = x.unsqueeze(0)
-        x = x.permute((0,2,1))
+        x = x.permute((0, 2, 1))
         x = self.Conv(x)
-        x = x.permute((0,2,1)).squeeze()
+        x = x.permute((0, 2, 1)).squeeze()
 
         return F.log_softmax(x, dim=1)
 
 
 class GCNModel(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False, layer=2):
         super(GCNModel, self).__init__()
         self.dropout = dropout
         self.conv1 = GCNConv(input_dim, filter_num)
@@ -474,16 +476,16 @@ class GCNModel(torch.nn.Module):
 
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
-        x = x.unsqueeze(0)
-        x = x.permute((0,2,1))
-        x = self.Conv(x)
-        x = x.permute((0,2,1)).squeeze()
+        x = x.unsqueeze(0)      # adds a singleton dimension at the beginning of the tensor x.
+        x = x.permute((0, 2, 1))    # If the original shape of x was [batch_size, original_dim1, original_dim2], the result of this permutation will be [batch_size, original_dim2, original_dim1].
+        x = self.Conv(x)    # applies a convolutional operation (assuming self.Conv is a convolutional layer) to the tensor x
+        x = x.permute((0, 2, 1)).squeeze()
 
         return F.log_softmax(x, dim=1)
 
 
 class ChebModel(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, K, dropout = False, layer=2):
+    def __init__(self, input_dim, out_dim, filter_num, K, dropout=False, layer=2):
         super(ChebModel, self).__init__()
         self.dropout = dropout
         self.conv1 = ChebConv(input_dim, filter_num, K)
@@ -509,15 +511,15 @@ class ChebModel(torch.nn.Module):
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = x.unsqueeze(0)
-        x = x.permute((0,2,1))
+        x = x.permute((0, 2, 1))
         x = self.Conv(x)
-        x = x.permute((0,2,1)).squeeze()
+        x = x.permute((0, 2, 1)).squeeze()
 
         return F.log_softmax(x, dim=1)
 
 
 class APPNP_Model(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, alpha = 0.1, dropout = False, layer=3):
+    def __init__(self, input_dim, out_dim, filter_num, alpha=0.1, dropout=False, layer=3):
         super(APPNP_Model, self).__init__()
         self.dropout = dropout
         self.line1 = nn.Linear(input_dim, filter_num)
@@ -551,16 +553,15 @@ class APPNP_Model(torch.nn.Module):
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = x.unsqueeze(0)
-        x = x.permute((0,2,1))
+        x = x.permute((0, 2, 1))
         x = self.Conv(x)
-        x = x.permute((0,2,1)).squeeze()
+        x = x.permute((0, 2, 1)).squeeze()
 
         return F.log_softmax(x, dim=1)
 
 
-
 class GIN_Model(torch.nn.Module):
-    def __init__(self, input_dim, out_dim, filter_num, dropout = False, layer=2):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False, layer=2):
         super(GIN_Model, self).__init__()
         self.dropout = dropout
         self.line1 = nn.Linear(input_dim, filter_num)
@@ -570,11 +571,10 @@ class GIN_Model(torch.nn.Module):
         self.conv2 = GINConv(self.line2)
 
         self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
-        self.layer=layer
+        self.layer = layer
         if layer == 3:
             self.line3 = nn.Linear(filter_num, filter_num)
             self.conv3 = GINConv(self.line3)
-
 
     def forward(self, data):
         x, edge_index = data.x, data.edge_index
@@ -590,8 +590,8 @@ class GIN_Model(torch.nn.Module):
         if self.dropout > 0:
             x = F.dropout(x, self.dropout, training=self.training)
         x = x.unsqueeze(0)
-        x = x.permute((0,2,1))
+        x = x.permute((0, 2, 1))
         x = self.Conv(x)
-        x = x.permute((0,2,1)).squeeze()
+        x = x.permute((0, 2, 1)).squeeze()
 
         return F.log_softmax(x, dim=1)

@@ -5,6 +5,20 @@ def parse_args():
     parser = argparse.ArgumentParser(description="baseline--Digraph")
     # choices=["baseline--graph attention.", "baseline--Digraph"]
 
+    # change frequently
+    parser.add_argument('--withAug', type=bool, default=False, help='with Aug or not')
+    parser.add_argument('--AugDirect', type=int, default=2, help='1 for one direction, 2 for bidirection aug edges')
+    parser.add_argument('--method_name', type=str, default='SAGE', help='method name')
+    parser.add_argument('--seed', type=int, default=100,
+                        help='random seed for training testing split/random graph generation')
+
+    # change less frequently
+    parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
+    parser.add_argument('--dataset', type=str, default='WikipediaNetwork/squirrel', help='data set selection')
+    parser.add_argument('--undirect_dataset', type=str,
+                        choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
+                        default='Cora', help='data set selection as GraphSHA')
+
     parser.add_argument('--MakeImbalance', type=bool, default=True, help='True for turn dataset into imbalanced')
     parser.add_argument('--CustomizeMask', type=bool, default=False,
                         help='True for generate train,val,test splits by me')
@@ -18,19 +32,13 @@ def parse_args():
     parser.add_argument('--data_path', type=str, default='../dataset/data/tmp/',
                         help='data set folder, for default format see dataset/cora/cora.edges and cora.node_labels')
 
-    parser.add_argument('--IsDirectedData', type=bool, default=False, help='the dataset is directed graph')
-    parser.add_argument('--dataset', type=str, default='WebKB/Cornell', help='data set selection')
-    parser.add_argument('--undirect_dataset', type=str,
-                        choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
-                        default='Cora', help='data set selection as GraphSHA')
+
 
     parser.add_argument('--epochs', type=int, default=1500, help='training epochs')
     parser.add_argument('--num_filter', type=int, default=2, help='num of filters')
     parser.add_argument('--p_q', type=float, default=0.95, help='direction strength, from 0.5 to 1.')
     parser.add_argument('--p_inter', type=float, default=0.1, help='inter_cluster edge probabilities.')
-    parser.add_argument('--method_name', type=str, default='GAT', help='method name')
-    parser.add_argument('--seed', type=int, default=100,
-                        help='random seed for training testing split/random graph generation')
+
 
     parser.add_argument('--dropout', type=float, default=0.0, help='dropout prob')
     parser.add_argument('--debug', '-D', action='store_true', help='debug mode')
@@ -42,10 +50,9 @@ def parse_args():
     parser.add_argument('-to_undirected', '-tud', action='store_true', help='if convert graph to undirecteds')
     parser.add_argument('--alpha', type=float, default=0.1, help='alpha teleport prob')
     parser.add_argument('--randomseed', type=int, default=-1, help='if set random seed in training')
-    parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
-    parser.add_argument('--AugDirect', type=int, default=1, help='1 for one direction, 2 for bidirection aug edges')
+
     parser.add_argument('--imb_ratio', type=float, default=100, help='imbalance ratio')
-    parser.add_argument('--net', type=str, choices=['GCN', 'GAT', 'SAGE'], default='GCN', help='GNN bachbone')
+    # parser.add_argument('--net', type=str, choices=['GCN', 'GAT', 'SAGE'], default='GCN', help='GNN bachbone')
     parser.add_argument('--n_layer', type=int, default=2, help='the number of layers')
     parser.add_argument('--feat_dim', type=int, default=64, help='feature dimension')
     parser.add_argument('--warmup', type=int, default=5, help='warmup epoch')

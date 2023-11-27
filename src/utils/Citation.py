@@ -28,18 +28,18 @@ def load_citation_link(root="./data"):
     values = coo.data
     indices = np.vstack((coo.row, coo.col))
     indices = torch.from_numpy(indices).long()
-    
+
     data = Data(x=values, edge_index=indices, edge_weight=None, y=None)
     return [data]
 
 
-def citation_datasets(root="./data", alpha=0.1, data_split = 10):
+def citation_datasets(root="./data", alpha=0.1, data_split=10):
     # path = os.path.join(save_path, dataset)
-    #os.makedirs(path, exist_ok=True)
-    #dataset_path = os.path.join(path, '{}.npz'.format(dataset))
+    # os.makedirs(path, exist_ok=True)
+    # dataset_path = os.path.join(path, '{}.npz'.format(dataset))
     g = load_npz_dataset(root)
     adj, features, labels = g['A'], g['X'], g['z']
-    
+
     coo = adj.tocoo()
     values = coo.data
     indices = np.vstack((coo.row, coo.col))
@@ -51,14 +51,14 @@ def citation_datasets(root="./data", alpha=0.1, data_split = 10):
     # * 500 labels for validation
     # * the rest for testing
     masks = {}
-    masks['train'], masks['val'], masks['test'] = [], [] , []
+    masks['train'], masks['val'], masks['test'] = [], [], []
     for split in range(data_split):
         mask = train_test_split(labels, seed=split, train_examples_per_class=20, val_size=500, test_size=None)
 
         mask['train'] = torch.from_numpy(mask['train']).bool()
         mask['val'] = torch.from_numpy(mask['val']).bool()
         mask['test'] = torch.from_numpy(mask['test']).bool()
-    
+
         masks['train'].append(mask['train'].unsqueeze(-1))
         masks['val'].append(mask['val'].unsqueeze(-1))
         masks['test'].append(mask['test'].unsqueeze(-1))
@@ -66,9 +66,9 @@ def citation_datasets(root="./data", alpha=0.1, data_split = 10):
     labels = torch.from_numpy(labels).long()
     data = Data(x=features, edge_index=indices, edge_weight=None, y=labels)
 
-    data.train_mask = torch.cat(masks['train'], axis=-1) 
-    data.val_mask   = torch.cat(masks['val'], axis=-1)
-    data.test_mask  = torch.cat(masks['test'], axis=-1)
+    data.train_mask = torch.cat(masks['train'], axis=-1)
+    data.val_mask = torch.cat(masks['val'], axis=-1)
+    data.test_mask = torch.cat(masks['test'], axis=-1)
 
     return [data]
 
@@ -92,7 +92,7 @@ def load_npz_dataset(file_name):
 
     """
     if not file_name.endswith('.npz'):
-        file_name += file_name.split('/')[-2]+'.npz'
+        file_name += file_name.split('/')[-2] + '.npz'
     with np.load(file_name, allow_pickle=True) as loader:
         loader = dict(loader)
         edge_index = loader['adj_indices'].copy()
@@ -130,7 +130,7 @@ def load_npz_dataset(file_name):
 
 def sample_per_class(random_state, labels, num_examples_per_class, forbidden_indices=None):
     num_samples = labels.shape[0]
-    num_classes = labels.max()+1
+    num_classes = labels.max() + 1
     sample_indices_per_class = {index: [] for index in range(num_classes)}
 
     # get indices sorted by class
@@ -153,7 +153,7 @@ def get_train_val_test_split(random_state,
                              test_examples_per_class=None,
                              train_size=None, val_size=None, test_size=None):
     num_samples = labels.shape[0]
-    num_classes = labels.max()+1
+    num_classes = labels.max() + 1
     remaining_indices = list(range(num_samples))
 
     if train_examples_per_class is not None:
@@ -219,14 +219,16 @@ def get_train_val_test_split(random_state,
     return train_indices, val_indices, test_indices
 
 
-def train_test_split(labels, seed, train_examples_per_class=None, val_examples_per_class=None, test_examples_per_class=None, train_size=None, val_size=None, test_size=None):
+def train_test_split(labels, seed, train_examples_per_class=None, val_examples_per_class=None,
+                     test_examples_per_class=None, train_size=None, val_size=None, test_size=None):
     random_state = np.random.RandomState(seed)
     train_indices, val_indices, test_indices = get_train_val_test_split(
-        random_state, labels, train_examples_per_class, val_examples_per_class, test_examples_per_class, train_size, val_size, test_size)
+        random_state, labels, train_examples_per_class, val_examples_per_class, test_examples_per_class, train_size,
+        val_size, test_size)
 
-    #print('number of training: {}'.format(len(train_indices)))
-    #print('number of validation: {}'.format(len(val_indices)))
-    #print('number of testing: {}'.format(len(test_indices)))
+    # print('number of training: {}'.format(len(train_indices)))
+    # print('number of validation: {}'.format(len(val_indices)))
+    # print('number of testing: {}'.format(len(test_indices)))
 
     train_mask = np.zeros((labels.shape[0], 1), dtype=int)
     train_mask[train_indices, 0] = 1
@@ -250,8 +252,8 @@ if __name__ == "__main__":
     # print_dataset_info()
     # get_npz_data(dataset='amazon_photo')
     ### already fixed split dataset!!!
-    #if opt.dataset == 'all':
+    # if opt.dataset == 'all':
     #    for mode in ['cora', 'cora_ml','citeseer','dblp','pubmed']:
     #        get_npz_data(dataset = mode)
-    #else:
+    # else:
     #    get_npz_data(dataset = opt.dataset)

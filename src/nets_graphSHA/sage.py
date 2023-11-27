@@ -133,7 +133,7 @@ class GraphSAGE2(nn.Module):
 
 
 class GraphSAGEX(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, dropout,nlayer=3):
+    def __init__(self, nfeat, nhid, nclass, dropout, nlayer=3):
         super(GraphSAGEX, self).__init__()
         self.conv1 = SAGEConv(nfeat, nhid)
         self.conv2 = SAGEConv(nhid, nclass)

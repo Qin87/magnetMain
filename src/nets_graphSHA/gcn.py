@@ -179,6 +179,7 @@ class GCNConv(MessagePassing):
         return matmul(adj_t, x, reduce=self.aggr)
 
     def __repr__(self):
+        # When you use the repr() function or the print() function on an object, it calls the object's __repr__ method to get a string representation.
         return '{}({}, {})'.format(self.__class__.__name__, self.in_channels,
                                    self.out_channels)
 

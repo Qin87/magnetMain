@@ -102,7 +102,10 @@ def main(args):
                                                           data.test_mask.clone())
         # print("how many val,,", data_val_mask.sum())   # how many val,, tensor(59)
         data_x = data.x
-        dataset_num_features = dataset.num_features
+        try:
+            dataset_num_features = dataset.num_features
+        except:
+            dataset_num_features = data_x.shape[1]
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
@@ -167,7 +170,6 @@ def main(args):
         if args.MakeImbalance:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
                 make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
-        # print("Let me see:", torch.sum(data_train_mask))
         else:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
                 keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
@@ -193,18 +195,19 @@ def main(args):
         if args.method_name == 'GAT':
             # model = GATModel(data.x.size(-1), num_classes, heads=args.heads, filter_num=args.num_filter,
             # 				  dropout=args.dropout, layer=args.layer).to(device)
-            model = create_gat(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+            model = create_gat(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
                                nlayer=args.n_layer)  # SHA
         elif args.method_name == 'GCN':
-            model = create_gcn(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+            model = create_gcn(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
                                nlayer=args.n_layer)  # SHA
         # model = GCNModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
         # 				 dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'SAGE':
             # model = SAGEModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
             #                   dropout=args.dropout, layer=args.layer).to(device)
-            model = create_sage(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
-                                nlayer=args.n_layer)        # SHA
+            model = create_sage(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                                nlayer=args.n_layer)
+
         # model = SAGE_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, dropout=args.dropout).to(
         #     device)
         elif args.method_name == 'GIN':
@@ -235,7 +238,7 @@ def main(args):
         else:
             raise NotImplementedError
 
-        print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+        # print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
         # opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
         opt = torch.optim.Adam(
             [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
@@ -409,10 +412,12 @@ def main(args):
             if CountNotImproved > 500:
                 print("Early stop at epoch: ", epoch)
                 break
-            print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n", epoch, train_accSHA,
-                  val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
+            # print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n", epoch, train_accSHA,
+            #       val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
+            # print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
+            #                                                                     test_f1 * 100))
 
-    print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
+        print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
                                                                         test_f1 * 100))
 
 

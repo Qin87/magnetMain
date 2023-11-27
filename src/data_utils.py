@@ -2,7 +2,7 @@ import random
 
 import torch
 import numpy as np
-# from dgl.data import CiteseerGraphDataset
+from dgl.data import CiteseerGraphDataset
 from torch_scatter import scatter_add
 import torch_geometric.transforms as T
 
@@ -14,6 +14,9 @@ from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS
 import torch.nn as nn
 import torch.nn.functional as F
 
+from src.utils.Citation import citation_datasets
+from src.utils.preprocess import load_syn
+
 
 class CrossEntropy(nn.Module):
     def __init__(self):
@@ -21,6 +24,9 @@ class CrossEntropy(nn.Module):
 
     def forward(self, input, target, weight=None, reduction='mean'):
         return F.cross_entropy(input, target, weight=weight, reduction=reduction)
+
+
+
 def load_data(args):
     load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
     print("dataset is ", load_func)  # Ben WebKB
@@ -37,7 +43,7 @@ def load_data(args):
         dataset = citation_datasets(root='../dataset/data/tmp/cora_ml/cora_ml.npz')
     elif load_func == 'citeseer_npz':
         dataset = citation_datasets(root='../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
-    elif load_func == 'dglCitation':
+    elif load_func == 'dglCitation':    # Ben
         return CiteseerGraphDataset(reverse_edge=False)
     else:
         dataset = load_syn(args.data_path + args.dataset, None)

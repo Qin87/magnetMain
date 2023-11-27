@@ -356,7 +356,7 @@ def main(args):
                 break
             print("For GraphSHA: Epoch\n", epoch, train_accSHA, val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
 
-    print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA*100, test_bacc*100, test_f1*100))
+        print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA*100, test_bacc*100, test_f1*100))
 
 if __name__ == "__main__":
     args = parse_args()

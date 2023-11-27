@@ -148,7 +148,8 @@ def neighbor_sampling_BiEdge(total_node, edge_index, sampling_src_idx,
     sampling_src_idx = sampling_src_idx.clone().to(device)
 
     # Find the nearest nodes and mix target pool
-    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+    # mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx.long()]
 
     # Compute degree
     col = edge_index[1]
