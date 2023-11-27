@@ -6,19 +6,37 @@ from datetime import datetime
 import os, time, argparse, csv
 from collections import Counter
 import torch.nn.functional as F
+from sklearn.metrics import balanced_accuracy_score, f1_score
 from sklearn.model_selection import train_test_split
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS
+import tqdm
+import warnings
+
+from src.layer.DGCN import SymModel
+from src.layer.DiGCN import DiModel, DiGCN_IB
+
+warnings.filterwarnings("ignore")
 
 # internal files
+from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, neighbor_sampling_BiEdge
+# from layer.DiGCN import *
+from nets_graphSHA import *
 from layer.cheb import *
 from src.ArgsBen import parse_args
+from src.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, generate_masks, keep_all_data, \
+    generate_masksRatio
+from src.gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
+from src.neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
+from src.nets_graphSHA.gcn import create_gcn
+from src.utils.data_utils_graphSHA import get_dataset, load_directedData
 from utils.Citation import *
-from layer.geometric_baselines import GATModel, GCNModel, GIN_Model, SAGEModel, ChebModel, APPNP_Model
+from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
 from utils.preprocess import geometric_dataset, load_syn
 from utils.save_settings import write_log
 from utils.hermitian import hermitian_decomp
+from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 from utils.symmetric_distochastic import desymmetric_stochastic
 
 # select cuda device if available
@@ -38,48 +56,131 @@ def main(args):
 
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
-    if os.path.isdir(log_path) == False:
+    if os.path.isdir(log_path) is False:
         try:
             os.makedirs(log_path)
         except FileExistsError:
             print('Folder exists!')
-    load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
-    if load_func == 'WebKB':
-        load_func = WebKB
-        dataset = load_func(root=args.data_path, name=subset)
-    elif load_func == 'WikipediaNetwork':
-        load_func = WikipediaNetwork
-        dataset = load_func(root=args.data_path, name=subset)
-    elif load_func == 'WikiCS':
-        load_func = WikiCS
-        dataset = load_func(root=args.data_path)
-    elif load_func == 'cora_ml':
-        dataset = citation_datasets(root='../dataset/data/tmp/cora_ml/cora_ml.npz')
-    elif load_func == 'citeseer_npz':
-        dataset = citation_datasets(root='../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
-    else:
-        dataset = load_syn(args.data_path + args.dataset, None)
 
-    if os.path.isdir(log_path) == False:
+    if args.IsDirectedData:
+        dataset = load_directedData(args)
+    else:
+        path = args.data_path
+        path = osp.join(path, args.undirect_dataset)
+        dataset = get_dataset(args.undirect_dataset, path, split_type='full')
+    print("Dataset is ", dataset, "\nIs DirectedData: ", args.IsDirectedData)
+
+    if os.path.isdir(log_path) is False:
         os.makedirs(log_path)
 
     data = dataset[0]
+    # results = np.zeros((1, 4))
+
+    global class_num_list, idx_info, prev_out, sample_times
+    global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
     if not data.__contains__('edge_weight'):
         data.edge_weight = None
+    else:
+        data.edge_weight = torch.FloatTensor(data.edge_weight)
     if args.to_undirected:
         data.edge_index = to_undirected(data.edge_index)
 
     data.y = data.y.long()
     num_classes = (data.y.max() - data.y.min() + 1).detach().numpy()
-    data = data.to(device)
-    # normalize label, the minimum should be 0 as class index
-    splits = data.train_mask.shape[1]
-    if len(data.test_mask.shape) == 1:
-        data.test_mask = data.test_mask.unsqueeze(1).repeat(1, splits)
 
+    # copy GraphSHA
+    if args.dataset.split('/')[0].startswith('dgl'):
+        edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
+        data_y = data.ndata['label']
+        data_train_mask, data_val_mask, data_test_mask = (
+        data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
+        data_x = data.ndata['feat']
+        # print(data_x.shape, data.num_nodes)  # torch.Size([3327, 3703])
+        dataset_num_features = data_x.shape[1]
+    else:
+        edges = data.edge_index  # for torch_geometric librar
+        data_y = data.y
+        # data_train_mask, data_val_mask, data_test_mask = (data.train_mask[:,0].clone(), data.val_mask[:,0].clone(),
+        #                                                   data.test_mask[:,0].clone())
+        data_train_mask, data_val_mask, data_test_mask = (data.train_mask.clone(), data.val_mask.clone(),
+                                                          data.test_mask.clone())
+        # print("how many val,,", data_val_mask.sum())   # how many val,, tensor(59)
+        data_x = data.x
+        dataset_num_features = dataset.num_features
+
+
+    IsDirectedGraph = test_directed(edges)
+    print("This is directed graph: ", IsDirectedGraph)
+    # print(torch.sum(data_train_mask), torch.sum(data_val_mask), torch.sum(data_test_mask), data_train_mask.shape,
+    #       data_val_mask.shape, data_test_mask.shape)  # tensor(11600) tensor(35380) tensor(5847) torch.Size([11701, 20])
+    print("data_x", data_x.shape)  # [11701, 300])
+
+    n_cls = data_y.max().item() + 1
+    data = data.to(device)
+
+    
+
+    criterion = CrossEntropy().to(device)
+
+    if args.IsDirectedData:
+        splits = data.train_mask.shape[1]
+        print("splits", splits)
+        if len(data.test_mask.shape) == 1:
+            data.test_mask = data.test_mask.unsqueeze(1).repeat(1, splits)
+    else:
+        splits = 1
     results = np.zeros((splits, 4))
+    if len(data_test_mask.shape) == 1:
+        data_test_mask = data_test_mask.unsqueeze(1).repeat(1, splits)
+    # print(data.edge_index.shape)    # torch.Size([2, 298])
+    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
+    # print("edge_index1", edge_index1.shape)    # torch.Size([2, 737])
+    # print("edge_weight1", edge_weights1)
+    edge_index1 = edge_index1.to(device)
+    edge_weights1 = edge_weights1.to(device)
+    if args.method_name[-2:] == 'ib':
+        edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
+        edge_index2 = edge_index2.to(device)
+        edge_weights2 = edge_weights2.to(device)
+        SparseEdges = (edge_index1, edge_index2)
+        edge_weight = (edge_weights1, edge_weights2)
+        del edge_index2, edge_weights2
+    else:
+        SparseEdges = edge_index1
+        edge_weight = edge_weights1
+    # print("edge_weight", edge_weight.shape, data.y.shape)
+    del edge_index1, edge_weights1
+    data = data.to(device)
+    # results = np.zeros((splits, 4))
     for split in range(splits):
-        log_str_full = ''
+        if splits == 1:
+            data_train_mask, data_val_mask, data_test_mask = (data.train_mask.clone(),
+                                                              data.val_mask.clone(),
+                                                              data.test_mask.clone())
+        else:
+            data_train_mask, data_val_mask, data_test_mask = (data.train_mask[:, split].clone(),
+                                                          data.val_mask[:, split].clone(),data.test_mask[:,split].clone())
+
+        if args.CustomizeMask:
+            data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
+
+        stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
+        n_data = []  # num of train in each class
+        for i in range(n_cls):
+            data_num = (stats == i).sum()
+            n_data.append(int(data_num.item()))
+        idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
+        if args.MakeImbalance:
+            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+        # print("Let me see:", torch.sum(data_train_mask))
+        else:
+            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
+
+
+
+	log_str_full = ''
         if args.method_name == 'GAT':
             model = GATModel(data.x.size(-1), num_classes, heads=args.heads, filter_num=args.num_filter,
                               dropout=args.dropout, layer=args.layer).to(device)
@@ -94,7 +195,6 @@ def main(args):
         elif args.method_name == 'GIN':
             model = GIN_Model(data.x.size(-1), num_classes, filter_num=args.num_filter,
                               dropout=args.dropout, layer=args.layer).to(device)
-
         elif args.method_name == 'Cheb':
             model = ChebModel(data.x.size(-1), num_classes, K=args.K,
                               filter_num=args.num_filter, dropout=args.dropout,
@@ -105,8 +205,18 @@ def main(args):
                                 dropout=args.dropout, layer=args.layer).to(device)
             # model = APPNP_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, alpha=args.alpha,
             #                    dropout=args.dropout, K=args.K).to(device)
-            elif TODO
-            elif
+        elif args.method_name == 'Digraph':
+            if not args.method_name[-2:] == 'ib':
+                model = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+                                dropout=args.dropout, layer=args.layer).to(device)
+            else:
+                model = DiGCN_IB(data.x.size(-1), hidden=args.num_filter,
+                                 num_classes=num_classes, dropout=args.dropout,
+                                 layer=args.layer).to(device)
+
+        elif args.method_name == 'SymDiGCN':
+            model = SymModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+                             dropout=args.dropout, layer=args.layer).to(device)
         else:
             raise NotImplementedError
 
@@ -284,5 +394,4 @@ if __name__ == "__main__":
         int(args.num_filter)) + 'tud' + str(args.to_undirected) + 'heads' + str(int(args.heads)) + 'layer' + str(
         int(args.layer))
     args.save_name = save_name
-    results = main(args)
-    np.save(dir_name + save_name, results)
+    main(args)

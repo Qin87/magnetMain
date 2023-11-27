@@ -374,6 +374,40 @@ def generate_masks(data_y, minClassTrain, ratio_val2train):
     print(torch.sum(train_mask), torch.sum(val_mask), torch.sum(test_mask))
     return train_mask, val_mask, test_mask
 
+def generate_masksRatio(data_y, TrainRatio, ValRatio):
+    n_cls = data_y.max().item() + 1
+
+    n_Alldata = []  # num of train in each class
+    for i in range(n_cls):
+        data_num = (data_y == i).sum()
+        n_Alldata.append(int(data_num.item()))
+    # print("In all nodes, class number:", n_Alldata)  # [264, 590, 668, 701, 596, 508]
+
+    num_train_sample = []
+    # Tmin = min(n_Alldata)
+    for i in range(len(n_Alldata)):
+        # Tnum_sample = int(minClassTrain * n_Alldata[i] / Tmin)
+        num_train_sample.append(int(TrainRatio*n_Alldata[i]))
+    print(num_train_sample)  # [20, 44, 50, 53, 45, 38]
+
+    train_mask = torch.zeros(len(data_y), dtype=torch.bool)
+    val_mask = torch.zeros(len(data_y), dtype=torch.bool)
+    test_mask = torch.zeros(len(data_y), dtype=torch.bool)
+
+    for class_label, num_samples in zip(range(len(num_train_sample)), num_train_sample):
+        class_indices = (data_y == class_label).nonzero().view(-1)
+        shuffled_indices = torch.randperm(len(class_indices))
+
+        # Divide the sampled indices into train, val, and test sets
+        train_indices = class_indices[shuffled_indices[:num_samples]]
+        val_indices = class_indices[shuffled_indices[num_samples:num_samples * (ValRatio/TrainRatio+1)]]
+        test_indices = class_indices[shuffled_indices[num_samples * (ValRatio/TrainRatio+1):]]
+
+        train_mask[train_indices] = True
+        val_mask[val_indices] = True
+        test_mask[test_indices] = True
+    print("train, val, test sample number: ", torch.sum(train_mask), torch.sum(val_mask), torch.sum(test_mask))
+    return train_mask, val_mask, test_mask
 # Example usage:
 # train_mask, val_mask, test_mask = generate_masks(data_y, num_train_sample, n_Alldata)
 

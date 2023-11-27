@@ -11,13 +11,16 @@ from sklearn.model_selection import train_test_split
 from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS
 import tqdm
+import warnings
+warnings.filterwarnings("ignore")
 
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, neighbor_sampling_BiEdge
 # from layer.DiGCN import *
 from nets_graphSHA import *
 from src.ArgsBen import parse_args
-from src.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, generate_masks, keep_all_data
+from src.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, generate_masks, keep_all_data, \
+    generate_masksRatio
 from src.gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
 from src.neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
 from src.nets_graphSHA.gcn import create_gcn
@@ -33,82 +36,6 @@ from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 # select cuda device if available
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
-
-def train():
-    global class_num_list, idx_info, prev_out
-    global data_train_mask, data_val_mask, data_test_mask
-    model.train()
-    optimizer.zero_grad()
-    if args.withAug:
-        if epoch > args.warmup:
-            # identifying source samples
-            prev_out_local = prev_out[train_idx]
-            sampling_src_idx, sampling_dst_idx = sampling_node_source(class_num_list, prev_out_local, idx_info_local, train_idx, args.tau, args.max, args.no_mask)
-
-            # semimxup
-            # new_edge_index = neighbor_sampling(data.x.size(0), data.edge_index[:,train_edge_mask], sampling_src_idx, neighbor_dist_list)
-            if args.AugDirect == 1 and args.AugDegree == 1:
-                new_edge_index = neighbor_sampling(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx,
-                                                   neighbor_dist_list)
-            elif args.AugDirect == 2 and args.AugDegree == 1:
-                new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
-                                                            sampling_src_idx, neighbor_dist_list)
-            elif args.AugDirect == 1 and args.AugDegree == 2:
-                new_edge_index = neighbor_sampling_bidegree(data_x.size(0), edges[:, train_edge_mask],
-                                                            sampling_src_idx, neighbor_dist_list)
-            elif args.AugDirect == 2 and args.AugDegree == 2:
-                new_edge_index = neighbor_sampling_BeEdge_bidegree(data_x.size(0), edges[:, train_edge_mask],
-                                                            sampling_src_idx, neighbor_dist_list)
-            else:
-                pass
-
-            beta = torch.distributions.beta.Beta(1, 100)
-            lam = beta.sample((len(sampling_src_idx),) ).unsqueeze(1)
-            new_x = saliency_mixup(data.x, sampling_src_idx, sampling_dst_idx, lam)
-
-        else:
-            sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
-            beta = torch.distributions.beta.Beta(2, 2)
-            lam = beta.sample((len(sampling_src_idx),) ).unsqueeze(1)
-            new_edge_index = duplicate_neighbor(data.x.size(0), data.edge_index[:,train_edge_mask], sampling_src_idx)
-            new_x = saliency_mixup(data.x, sampling_src_idx, sampling_dst_idx, lam)
-
-
-        output = model(new_x, new_edge_index)
-        prev_out = (output[:data.x.size(0)]).detach().clone()
-        add_num = output.shape[0] - data_train_mask.shape[0]
-        new_train_mask = torch.ones(add_num, dtype=torch.bool, device= data.x.device)
-        new_train_mask = torch.cat((data_train_mask, new_train_mask), dim =0)
-        _new_y = data.y[sampling_src_idx].clone()
-        new_y = torch.cat((data.y[data_train_mask], _new_y),dim =0)
-        criterion(output[new_train_mask], new_y).backward()
-    else:
-        out = model(data.x, data.edge_index)
-        criterion(out[data_train_mask], data.y[data_train_mask]).backward()
-
-    with torch.no_grad():
-        model.eval()
-        output = model(data.x, data.edge_index[:,train_edge_mask])
-        val_loss= F.cross_entropy(output[data_val_mask], data.y[data_val_mask])
-    optimizer.step()
-    scheduler.step(val_loss)
-    return
-
-# def test():
-#     model.eval()
-#     logits = model(data.x, data.edge_index[:,train_edge_mask])
-#     accs, baccs, f1s = [], [], []
-#     for mask in [data_train_mask, data_val_mask, data_test_mask]:
-#         pred = logits[mask].max(1)[1]
-#         y_pred = pred.cpu().numpy()
-#         y_true = data.y[mask].cpu().numpy()
-#         acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
-#         bacc = balanced_accuracy_score(y_true, y_pred)
-#         f1 = f1_score(y_true, y_pred, average='macro')
-#         accs.append(acc)
-#         baccs.append(bacc)
-#         f1s.append(f1)
-#     return accs, baccs, f1s
 
 
 def acc(pred, label, mask):
@@ -135,23 +62,7 @@ def main(args):
         path = args.data_path
         path = osp.join(path, args.undirect_dataset)
         dataset = get_dataset(args.undirect_dataset, path, split_type='full')
-
-    # load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
-    # if load_func == 'WebKB':
-    #     load_func = WebKB
-    #     dataset = load_func(root=args.data_path, name=subset)
-    # elif load_func == 'WikipediaNetwork':
-    #     load_func = WikipediaNetwork
-    #     dataset = load_func(root=args.data_path, name=subset)
-    # elif load_func == 'WikiCS':
-    #     load_func = WikiCS
-    #     dataset = load_func(root=args.data_path)
-    # elif load_func == 'cora_ml':
-    #     dataset = citation_datasets(root='../dataset/data/tmp/cora_ml/cora_ml.npz')
-    # elif load_func == 'citeseer_npz':
-    #     dataset = citation_datasets(root='../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
-    # else:
-    #     dataset = load_syn(args.data_path + args.dataset, None)
+    print("Dataset is ", dataset, "\nIs DirectedData: ", args.IsDirectedData)
 
     if os.path.isdir(log_path) is False:
         os.makedirs(log_path)
@@ -165,6 +76,9 @@ def main(args):
         data.edge_weight = None
     else:
         data.edge_weight = torch.FloatTensor(data.edge_weight)
+    if args.to_undirected:
+        data.edge_index = to_undirected(data.edge_index)
+
     data.y = data.y.long()
     num_classes = (data.y.max() - data.y.min() + 1).detach().numpy()
 
@@ -198,16 +112,17 @@ def main(args):
     n_cls = data_y.max().item() + 1
     data = data.to(device)
 
+    
+
     criterion = CrossEntropy().to(device)
 
-    # optimizer = torch.optim.Adam([dict(params=model.reg_params, weight_decay=5e-4),
-    #                               dict(params=model.non_reg_params, weight_decay=0), ], lr=args.lr)
-    # scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=100,
-    #                                                        verbose=False)
-
-    # normalize label, the minimum should be 0 as class index
-    splits = data.train_mask.shape[1]
-    print("splits", splits)
+    if args.IsDirectedData:
+        splits = data.train_mask.shape[1]
+        print("splits", splits)
+        if len(data.test_mask.shape) == 1:
+            data.test_mask = data.test_mask.unsqueeze(1).repeat(1, splits)
+    else:
+        splits = 1
     results = np.zeros((splits, 4))
     if len(data_test_mask.shape) == 1:
         data_test_mask = data_test_mask.unsqueeze(1).repeat(1, splits)
@@ -241,16 +156,13 @@ def main(args):
                                                           data.val_mask[:, split].clone(),data.test_mask[:,split].clone())
 
         if args.CustomizeMask:
-            ratio_val2train = 3
-            minTrainClass = 60
-            data_train_mask, data_val_mask, data_test_mask = generate_masks(data_y, minTrainClass, ratio_val2train)
+            data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
 
         stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
         n_data = []  # num of train in each class
         for i in range(n_cls):
             data_num = (stats == i).sum()
             n_data.append(int(data_num.item()))
-
         idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
         if args.MakeImbalance:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
@@ -297,14 +209,14 @@ def main(args):
         best_val_acc_f1 = 0
         saliency, prev_out = None, None
 
-        for epoch in tqdm.tqdm(range(args.epoch)):
-            # for epoch in range(args.epochs):
+        # for epoch in tqdm.tqdm(range(args.epoch)):
+        CountNotImproved = 0
+        for epoch in range(args.epochs):
             start_time = time.time()
             ####################
             # Train
             ####################
             # for loop for batch loading
-
             model.train()
             opt.zero_grad()  # clear the gradients of the model's parameters.
 
@@ -443,7 +355,11 @@ def main(args):
                 test_accSHA = accs[2]
                 test_bacc = baccs[2]
                 test_f1 = f1s[2]
-            print("For GraphSHA:\n", train_accSHA, val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
+            else:
+                CountNotImproved += 1
+            if CountNotImproved > 100:
+                break
+            print("For GraphSHA: Epoch\n", epoch, train_accSHA, val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
 
     print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA*100, test_bacc*100, test_f1*100))
 
@@ -515,7 +431,13 @@ if __name__ == "__main__":
             os.makedirs(dir_name)
         except FileExistsError:
             print('Folder exists!')
-    save_name = args.method_name + 'lr' + str(int(args.lr * 1000)) + 'num_filters' + str(
-        int(args.num_filter)) + 'alpha' + str(int(100 * args.alpha)) + 'layer' + str(int(args.layer))
+
+    if args.method_name == 'GAT':
+        save_name = args.method_name + 'lr' + str(int(args.lr * 1000)) + 'num_filters' + str(
+            int(args.num_filter)) + 'tud' + str(args.to_undirected) + 'heads' + str(int(args.heads)) + 'layer' + str(
+            int(args.layer))
+    else:
+        save_name = args.method_name + 'lr' + str(int(args.lr * 1000)) + 'num_filters' + str(
+            int(args.num_filter)) + 'alpha' + str(int(100 * args.alpha)) + 'layer' + str(int(args.layer))   # Digraph and GCN
     args.save_name = save_name
     main(args)
