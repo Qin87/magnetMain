@@ -28,7 +28,7 @@ def parse_args():
     parser.add_argument('--num_filter', type=int, default=2, help='num of filters')
     parser.add_argument('--p_q', type=float, default=0.95, help='direction strength, from 0.5 to 1.')
     parser.add_argument('--p_inter', type=float, default=0.1, help='inter_cluster edge probabilities.')
-    parser.add_argument('--method_name', type=str, default='DiG', help='method name')
+    parser.add_argument('--method_name', type=str, default='GAT', help='method name')
     parser.add_argument('--seed', type=int, default=100,
                         help='random seed for training testing split/random graph generation')
 
@@ -43,7 +43,7 @@ def parse_args():
     parser.add_argument('--alpha', type=float, default=0.1, help='alpha teleport prob')
     parser.add_argument('--randomseed', type=int, default=-1, help='if set random seed in training')
     parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
-    parser.add_argument('--AugDirect', type=int, default=2, help='1 for one direction, 2 for bidirection aug edges')
+    parser.add_argument('--AugDirect', type=int, default=1, help='1 for one direction, 2 for bidirection aug edges')
     parser.add_argument('--imb_ratio', type=float, default=100, help='imbalance ratio')
     parser.add_argument('--net', type=str, choices=['GCN', 'GAT', 'SAGE'], default='GCN', help='GNN bachbone')
     parser.add_argument('--n_layer', type=int, default=2, help='the number of layers')

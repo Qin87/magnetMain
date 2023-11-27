@@ -12,12 +12,19 @@ from torch.optim.lr_scheduler import CosineAnnealingLR
 from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS
 import tqdm
 import warnings
+
+from src.layer.DGCN import SymModel
+from src.layer.DiGCN import DiModel, DiGCN_IB
+from src.nets_graphSHA.gat import create_gat
+from src.nets_graphSHA.sage import create_sage
+
 warnings.filterwarnings("ignore")
 
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, neighbor_sampling_BiEdge
 # from layer.DiGCN import *
 from nets_graphSHA import *
+from layer.cheb import *
 from src.ArgsBen import parse_args
 from src.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, generate_masks, keep_all_data, \
     generate_masksRatio
@@ -32,13 +39,11 @@ from utils.preprocess import geometric_dataset, load_syn
 from utils.save_settings import write_log
 from utils.hermitian import hermitian_decomp
 from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
+from utils.symmetric_distochastic import desymmetric_stochastic
 
 # select cuda device if available
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
-
-
-
 
 
 def main(args):
@@ -84,7 +89,7 @@ def main(args):
         edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
         data_y = data.ndata['label']
         data_train_mask, data_val_mask, data_test_mask = (
-        data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
+            data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat']
         # print(data_x.shape, data.num_nodes)  # torch.Size([3327, 3703])
         dataset_num_features = data_x.shape[1]
@@ -98,7 +103,6 @@ def main(args):
         # print("how many val,,", data_val_mask.sum())   # how many val,, tensor(59)
         data_x = data.x
         dataset_num_features = dataset.num_features
-
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
@@ -148,7 +152,8 @@ def main(args):
                                                               data.test_mask.clone())
         else:
             data_train_mask, data_val_mask, data_test_mask = (data.train_mask[:, split].clone(),
-                                                          data.val_mask[:, split].clone(),data.test_mask[:,split].clone())
+                                                              data.val_mask[:, split].clone(),
+                                                              data.test_mask[:, split].clone())
 
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
@@ -185,19 +190,62 @@ def main(args):
                                                        device)
 
         log_str_full = ''
-        model = create_gcn(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
-                           nlayer=args.n_layer)
-        print(model)    # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
-        # opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
+        if args.method_name == 'GAT':
+            # model = GATModel(data.x.size(-1), num_classes, heads=args.heads, filter_num=args.num_filter,
+            # 				  dropout=args.dropout, layer=args.layer).to(device)
+            model = create_gat(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                               nlayer=args.n_layer)  # SHA
+        elif args.method_name == 'GCN':
+            model = create_gcn(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                               nlayer=args.n_layer)  # SHA
+        # model = GCNModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+        # 				 dropout=args.dropout, layer=args.layer).to(device)
+        elif args.method_name == 'SAGE':
+            # model = SAGEModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+            #                   dropout=args.dropout, layer=args.layer).to(device)
+            model = create_sage(nfeat=dataset.num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                                nlayer=args.n_layer)        # SHA
+        # model = SAGE_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, dropout=args.dropout).to(
+        #     device)
+        elif args.method_name == 'GIN':
+            model = GIN_Model(data.x.size(-1), num_classes, filter_num=args.num_filter,
+                              dropout=args.dropout, layer=args.layer).to(device)
+        elif args.method_name == 'Cheb':
+            model = ChebModel(data.x.size(-1), num_classes, K=args.K,
+                              filter_num=args.num_filter, dropout=args.dropout,
+                              layer=args.layer).to(device)
+        elif args.method_name == 'APPNP':
+            model = APPNP_Model(data.x.size(-1), num_classes,
+                                filter_num=args.num_filter, alpha=args.alpha,
+                                dropout=args.dropout, layer=args.layer).to(device)
+        # model = APPNP_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, alpha=args.alpha,
+        #                    dropout=args.dropout, K=args.K).to(device)
+        elif args.method_name == 'DiG':
+            if not args.method_name[-2:] == 'ib':
+                model = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+                                dropout=args.dropout, layer=args.layer).to(device)
+            else:
+                model = DiGCN_IB(data.x.size(-1), hidden=args.num_filter,
+                                 num_classes=num_classes, dropout=args.dropout,
+                                 layer=args.layer).to(device)
+
+        elif args.method_name == 'SymDiGCN':
+            model = SymModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+                             dropout=args.dropout, layer=args.layer).to(device)
+        else:
+            raise NotImplementedError
+
+        print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+        # opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
         opt = torch.optim.Adam(
             [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
-            lr=args.lr)     # from SHA
+            lr=args.lr)  # from SHA
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
                                                                verbose=False)
-    #
-    #     #################################
-    #     # Train/Validation/Test
-    #     #################################
+        #
+        #     #################################
+        #     # Train/Validation/Test
+        #     #################################
         test_accSHA = test_bacc = test_f1 = 0.0
 
         # from GraphSHA
@@ -226,7 +274,7 @@ def main(args):
                                                            neighbor_dist_list)
                     elif args.AugDirect == 2:
                         new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
-                                                            sampling_src_idx, neighbor_dist_list)
+                                                                  sampling_src_idx, neighbor_dist_list)
                     else:
                         pass
                     beta = torch.distributions.beta.Beta(1, 100)
@@ -281,7 +329,7 @@ def main(args):
                     _new_y = data_y[sampling_src_idx].clone()
                     # print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
                     # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)    #
-                    new_y = torch.cat((data_y, _new_y), dim=0)    #
+                    new_y = torch.cat((data_y, _new_y), dim=0)  #
                     # print("y:", new_y.shape)    # y: torch.Size([542])
 
                     # get SparseEdges and edge_weight
@@ -306,7 +354,10 @@ def main(args):
                     del edge_index1, edge_weights1
 
                 # print(new_x[0][:100], new_SparseEdges.shape, new_edge_weight.shape)   # torch.Size([2, 1918]) torch.Size([1918])
-                out = model(new_x, new_SparseEdges, new_edge_weight)   #
+                try:
+                    out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                except:
+                    out = model(new_x, new_edge_index)
                 prev_out = (out[:data_x.size(0)]).detach().clone()
 
                 # add_num = len(sampling_src_idx)  # Ben
@@ -317,8 +368,11 @@ def main(args):
                 # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y_train = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y_train).backward()
-            else:   # # without aug
-                out = model(data_x, SparseEdges, edge_weight)
+            else:  # # without aug
+                try:
+                    out = model(data_x, SparseEdges, edge_weight)
+                except:
+                    out = model(data_x, edges)
                 # print(out[data_train_mask].shape, '\n', y.shape)  # torch.Size([250, 6]) torch.Size([250])
                 criterion(out[data_train_mask], data_y[data_train_mask]).backward()
 
@@ -353,10 +407,14 @@ def main(args):
             else:
                 CountNotImproved += 1
             if CountNotImproved > 500:
+                print("Early stop at epoch: ", epoch)
                 break
-            print("For GraphSHA: Epoch\n", epoch, train_accSHA, val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
+            print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n", epoch, train_accSHA,
+                  val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
 
-    print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA*100, test_bacc*100, test_f1*100))
+    print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
+                                                                        test_f1 * 100))
+
 
 if __name__ == "__main__":
     args = parse_args()
@@ -409,6 +467,8 @@ if __name__ == "__main__":
                 dataset = 'syn/syn_tri_' + str(dataset_name_dict[args.p_q]) + '_fill'
             setting_dict_curr = setting_dict[dataset][args.method_name].split(',')
             args.alpha = float(setting_dict_curr[setting_dict_curr.index('alpha') + 1])
+            args.heads = int(setting_dict_curr[setting_dict_curr.index('heads') + 1])
+            args.to_undirected = (setting_dict_curr[setting_dict_curr.index('to_undirected') + 1] == 'True')
             try:
                 args.num_filter = int(setting_dict_curr[setting_dict_curr.index('num_filter') + 1])
             except ValueError:
@@ -421,6 +481,7 @@ if __name__ == "__main__":
                 args.layer = int(setting_dict_curr[setting_dict_curr.index('layer') + 1])
             except ValueError:
                 pass
+
     if os.path.isdir(dir_name) is False:
         try:
             os.makedirs(dir_name)
@@ -433,6 +494,7 @@ if __name__ == "__main__":
             int(args.layer))
     else:
         save_name = args.method_name + 'lr' + str(int(args.lr * 1000)) + 'num_filters' + str(
-            int(args.num_filter)) + 'alpha' + str(int(100 * args.alpha)) + 'layer' + str(int(args.layer))   # Digraph and GCN
+            int(args.num_filter)) + 'alpha' + str(int(100 * args.alpha)) + 'layer' + str(
+            int(args.layer))  # Digraph and GCN
     args.save_name = save_name
     main(args)
