@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore")
 
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
-    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree
+    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin
 # from layer.DiGCN import *
 from nets_graphSHA import *
 from layer.cheb import *
@@ -286,6 +286,9 @@ def main(args):
                     elif args.AugDirect == 20:
                         new_edge_index = neighbor_sampling_bidegree(data_x.size(0), edges[:, train_edge_mask],
                                                                   sampling_src_idx, neighbor_dist_list)     # has two types
+                    elif args.AugDirect == 21:
+                        new_edge_index = neighbor_sampling_bidegreeOrigin(data_x.size(0), edges[:, train_edge_mask],
+                                                                  sampling_src_idx, neighbor_dist_list)
 
                     else:
                         pass
