@@ -16,6 +16,6 @@ WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
 'WikipediaNetwork/chameleon', 'WikipediaNetwork/crocodile', 'WikipediaNetwork/squirrel'     ---tested OK, too much time in squirrel
 'WikiCS/'       ---tested OK
 'cora_ml/'     ---tested OK
-'citeseer_npz/'       ---tested OK
+'citeseer_npz/'       ---tested OK  too much time
 ***'dglCitation/'   ----tested fail
 
