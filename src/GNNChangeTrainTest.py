@@ -21,7 +21,8 @@ from src.nets_graphSHA.sage import create_sage
 warnings.filterwarnings("ignore")
 
 # internal files
-from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, neighbor_sampling_BiEdge
+from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
+    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree
 # from layer.DiGCN import *
 from nets_graphSHA import *
 from layer.cheb import *
@@ -149,6 +150,8 @@ def main(args):
     data = data.to(device)
     # results = np.zeros((splits, 4))
     for split in range(splits):
+        # if split <7:
+        #     continue
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data.train_mask.clone(),
                                                               data.val_mask.clone(),
@@ -160,7 +163,6 @@ def main(args):
 
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
-
         stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
         n_data = []  # num of train in each class
         for i in range(n_cls):
@@ -278,6 +280,13 @@ def main(args):
                     elif args.AugDirect == 2:
                         new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
                                                                   sampling_src_idx, neighbor_dist_list)
+                    elif args.AugDirect == 4:
+                        new_edge_index = neighbor_sampling_BiEdge_bidegree(data_x.size(0), edges[:, train_edge_mask],
+                                                                  sampling_src_idx, neighbor_dist_list)
+                    elif args.AugDirect == 20:
+                        new_edge_index = neighbor_sampling_bidegree(data_x.size(0), edges[:, train_edge_mask],
+                                                                  sampling_src_idx, neighbor_dist_list)     # has two types
+
                     else:
                         pass
                     beta = torch.distributions.beta.Beta(1, 100)
