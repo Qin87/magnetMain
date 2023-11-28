@@ -1,16 +1,8 @@
 # external files
-import numpy as np
 import pickle as pk
-import torch.optim as optim
 from datetime import datetime
-import os, time, argparse, csv
-from collections import Counter
-import torch.nn.functional as F
+import time
 from sklearn.metrics import balanced_accuracy_score, f1_score
-from sklearn.model_selection import train_test_split
-from torch.optim.lr_scheduler import CosineAnnealingLR
-from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS
-import tqdm
 import warnings
 
 from src.layer.DGCN import SymModel
@@ -24,23 +16,17 @@ warnings.filterwarnings("ignore")
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
     neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin
 # from layer.DiGCN import *
-from nets_graphSHA import *
-from layer.cheb import *
 from src.ArgsBen import parse_args
-from src.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, generate_masks, keep_all_data, \
+from src.utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
     generate_masksRatio
 from src.gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
 from src.neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
 from src.nets_graphSHA.gcn import create_gcn
-from src.utils.data_utils_graphSHA import get_dataset, load_directedData
+from src.utils.data_utils import get_dataset, load_directedData
 from utils.Citation import *
 from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
-from utils.preprocess import geometric_dataset, load_syn
-from utils.save_settings import write_log
-from utils.hermitian import hermitian_decomp
 from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
-from utils.symmetric_distochastic import desymmetric_stochastic
 
 # select cuda device if available
 cuda_device = 0
@@ -75,15 +61,19 @@ def main(args):
 
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
-    if not data.__contains__('edge_weight'):
-        data.edge_weight = None
-    else:
+    # if not data.__contains__('edge_weight'):
+    #     data.edge_weight = None
+    # else:
+    #     data.edge_weight = torch.FloatTensor(data.edge_weight)
+    try:
         data.edge_weight = torch.FloatTensor(data.edge_weight)
+    except:
+        data.edge_weight = None
+
     if args.to_undirected:
         data.edge_index = to_undirected(data.edge_index)
 
-    data.y = data.y.long()
-    num_classes = (data.y.max() - data.y.min() + 1).detach().numpy()
+
 
     # copy GraphSHA
     if args.dataset.split('/')[0].startswith('dgl'):
@@ -108,6 +98,9 @@ def main(args):
         except:
             dataset_num_features = data_x.shape[1]
 
+    data_y = data_y.long()
+    num_classes = (data_y.max() - data_y.min() + 1).detach().numpy()
+
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
     # print(torch.sum(data_train_mask), torch.sum(data_val_mask), torch.sum(data_test_mask), data_train_mask.shape,
@@ -119,16 +112,17 @@ def main(args):
 
     criterion = CrossEntropy().to(device)
 
-    if args.IsDirectedData:
-        splits = data.train_mask.shape[1]
+    try:
+        splits = data_train_mask.shape[1]
         print("splits", splits)
-        if len(data.test_mask.shape) == 1:
-            data.test_mask = data.test_mask.unsqueeze(1).repeat(1, splits)
-    else:
+        # print("deed, ", data_test_mask.shape)     # torch.Size([3327])
+        if len(data_test_mask.shape) == 1:
+            data_test_mask = data_test_mask.unsqueeze(1).repeat(1, splits)
+        # print("deed, ", data_test_mask.shape)     # torch.Size([3327, 1])
+    except IndexError:
         splits = 1
+
     results = np.zeros((splits, 4))
-    if len(data_test_mask.shape) == 1:
-        data_test_mask = data_test_mask.unsqueeze(1).repeat(1, splits)
     # print(data.edge_index.shape)    # torch.Size([2, 298])
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
     # print("edge_index1", edge_index1.shape)    # torch.Size([2, 737])
@@ -153,13 +147,13 @@ def main(args):
         # if split <7:
         #     continue
         if splits == 1:
-            data_train_mask, data_val_mask, data_test_mask = (data.train_mask.clone(),
-                                                              data.val_mask.clone(),
-                                                              data.test_mask.clone())
+            data_train_mask, data_val_mask, data_test_mask = (data_train_mask.clone(),
+                                                              data_val_mask.clone(),
+                                                              data_test_mask.clone())
         else:
-            data_train_mask, data_val_mask, data_test_mask = (data.train_mask[:, split].clone(),
-                                                              data.val_mask[:, split].clone(),
-                                                              data.test_mask[:, split].clone())
+            data_train_mask, data_val_mask, data_test_mask = (data_train_mask[:, split].clone(),
+                                                              data_val_mask[:, split].clone(),
+                                                              data_test_mask[:, split].clone())
 
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
@@ -282,13 +276,14 @@ def main(args):
                                                                   sampling_src_idx, neighbor_dist_list)
                     elif args.AugDirect == 4:
                         new_edge_index = neighbor_sampling_BiEdge_bidegree(data_x.size(0), edges[:, train_edge_mask],
-                                                                  sampling_src_idx, neighbor_dist_list)
+                                                                           sampling_src_idx, neighbor_dist_list)
                     elif args.AugDirect == 20:
                         new_edge_index = neighbor_sampling_bidegree(data_x.size(0), edges[:, train_edge_mask],
-                                                                  sampling_src_idx, neighbor_dist_list)     # has two types
+                                                                    sampling_src_idx,
+                                                                    neighbor_dist_list)  # has two types
                     elif args.AugDirect == 21:
                         new_edge_index = neighbor_sampling_bidegreeOrigin(data_x.size(0), edges[:, train_edge_mask],
-                                                                  sampling_src_idx, neighbor_dist_list)
+                                                                          sampling_src_idx, neighbor_dist_list)
 
                     else:
                         pass
@@ -402,10 +397,11 @@ def main(args):
             logits = model(data_x, edges[:, train_edge_mask])
             accs, baccs, f1s = [], [], []
             for mask in [data_train_mask, data_val_mask, data_test_mask]:
+                # print(mask.shape, logits.shape)  # torch.Size([3327, 1]) torch.Size([3327, 6])
                 pred = logits[mask].max(1)[1]
                 y_pred = pred.cpu().numpy()
                 y_true = data_y[mask].cpu().numpy()
-                acc_epoch = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+                acc_epoch = pred.eq(data_y[mask]).sum().item() / mask.sum().item()
                 bacc = balanced_accuracy_score(y_true, y_pred)
                 f1 = f1_score(y_true, y_pred, average='macro')
                 accs.append(acc_epoch)
@@ -430,7 +426,7 @@ def main(args):
             #                                                                     test_f1 * 100))
 
         print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
-                                                                        test_f1 * 100))
+                                                                            test_f1 * 100))
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@ class CrossEntropy(nn.Module):
 
 
 
-def load_data(args):
+def load_directedData(args):
     load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
     print("dataset is ", load_func)  # Ben WebKB
     if load_func == 'WebKB':

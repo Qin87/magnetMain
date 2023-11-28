@@ -201,7 +201,8 @@ def neighbor_sampling_bidegreeOrigin(total_node, edge_index, sampling_src_idx,
     """
     ## Exception Handling ##
     device = edge_index.device
-    sampling_src_idx = sampling_src_idx.clone().to(device)
+    # sampling_src_idx = sampling_src_idx.clone().to(device)
+    sampling_src_idx = torch.tensor(sampling_src_idx, dtype=torch.long)
 
     # Find the nearest nodes and mix target pool
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
@@ -210,8 +211,9 @@ def neighbor_sampling_bidegreeOrigin(total_node, edge_index, sampling_src_idx,
     # Compute col_degree
     col = edge_index[1]
     row = edge_index[0]
-    col_degree = scatter_add(torch.ones_like(col), col)  # Ben only col col_degree
-    row_degree = scatter_add(torch.ones_like(row), row)  # Ben only col col_degree
+    col_degree = scatter_add(torch.ones_like(col), col)  # Ben only col col_degree (count in the end of edge)
+    row_degree = scatter_add(torch.ones_like(row), row)  # Ben only col col_degree   ( count in the source of edge)
+    # print(col_degree)
 
     if len(col_degree) < total_node:
         col_degree = torch.cat([col_degree, col_degree.new_zeros(total_node - len(col_degree))], dim=0)
@@ -296,11 +298,6 @@ def neighbor_sampling_bidegree(total_node, edge_index, sampling_src_idx,
     if train_node_mask is None:
         train_node_mask = torch.ones_like(col_degree,
                                           dtype=torch.bool)  # the same shape as the col_degree tensor, and all elements in the mask are set to True.
-    # print("col degree\n", col_degree, "\nrow degree\n", row_degree, row_degree.shape)
-    # if torch.equal(col_degree, row_degree):
-    #     print("the same")
-    # else:
-    #     print("different")    # here
     col_degree_dist = scatter_add(torch.ones_like(col_degree[train_node_mask]), col_degree[train_node_mask]).to(
         device).type(
         torch.float32)
