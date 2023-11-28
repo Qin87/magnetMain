@@ -1,8 +1,10 @@
 import random
 
+import dgl
 import torch
 import numpy as np
-from dgl.data import CiteseerGraphDataset
+from dgl.data import CiteseerGraphDataset, CoraGraphDataset, PubmedGraphDataset, CoraFullDataset, \
+    AmazonCoBuyComputerDataset, PPIDataset, RedditDataset, FraudDataset, BAShapeDataset
 from torch_scatter import scatter_add
 import torch_geometric.transforms as T
 
@@ -43,13 +45,62 @@ def load_directedData(args):
         dataset = citation_datasets(root='../dataset/data/tmp/cora_ml/cora_ml.npz')
     elif load_func == 'citeseer_npz':
         dataset = citation_datasets(root='../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
-    elif load_func == 'dglCitation':    # Ben
-        return CiteseerGraphDataset(reverse_edge=False)
+    elif load_func == 'dgl':    # Ben
+        subset = subset.lower()
+        try:
+            dataset = load_dgl_directed(subset)
+        except NotImplementedError:
+            print("Load data unexpected: undirected data!")
+            dataset = load_dgl_bidirected(args)
     else:
         dataset = load_syn(args.data_path + args.dataset, None)
 
     return dataset
 
+def load_dgl_directed(subset):
+    if subset == 'citeseer':    # Nodes: 3327, Edges: 9228, Number of Classes: 6
+        return CiteseerGraphDataset(reverse_edge=False)
+
+    elif subset == 'cora':  # Nodes: 2708, Edges: 10556, Number of Classes: 7
+        return CoraGraphDataset(reverse_edge=False)
+    elif subset == 'pubmed':    # Nodes: 19717, Edges: 88651
+        dataset = PubmedGraphDataset(reverse_edge=False)
+    elif subset == 'aifb':  # Nodes: 7262, Edges: 48810 (including reverse edges)
+        dataset = dgl.data.rdf.AIFBDataset(insert_reverse=False)
+    elif subset =='mutag':  # Nodes: 27163, Edges: 148100 (including reverse edges), 2 class
+        dataset = dgl.data.rdf.MUTAGDataset(insert_reverse=False)
+    elif subset == 'bgs':   # Nodes: 94806,  Edges: 672884 (including reverse edges), 2 class
+        dataset = dgl.data.rdf.BGSDataset(insert_reverse=False)
+    elif subset == 'am':   # Nodes: 881680  Edges: 5668682 (including reverse edges)
+        dataset = dgl.data.rdf.AMDataset(insert_reverse=False)
+
+
+    else:
+        raise NotImplementedError("Not Implemented Dataset!  You can add in function load_dgl...")
+
+    return dataset
+
+def load_dgl_bidirected(subset):
+    if subset == 'amazon_computer':
+        dataset = AmazonCoBuyComputerDataset()
+    elif subset == 'ppi':   # 24 graphs. The average number of nodes per graph is 2372. Each node has 50 features and 121 labels. 20 graphs for training, 2 for validation and 2 for testing.
+        dataset = PPIDataset(mode='valid')
+    elif subset == 'reddit':    # Nodes: 232,965
+        dataset = RedditDataset()
+    elif subset == 'fraud_yelp':    # Nodes: 45,954
+        dataset = FraudDataset('yelp')
+
+    elif subset == 'corafull':  # Nodes: 19,793, Edges: 126,842 (note that the original dataset has 65,311 edges but DGL adds the reverse edges and remove the duplicates, hence with a different number)
+        return CoraFullDataset()   # this is undirected dataset
+    elif subset == 'bashape':
+        dataset = BAShapeDataset()
+
+    else:
+        raise NotImplementedError("Not Implemented Dataset! You can add in function load_dgl...")
+
+
+
+    return dataset
 
 def get_dataset(name, path, split_type='public'):
     """

@@ -51,6 +51,7 @@ def main(args):
         path = args.data_path
         path = osp.join(path, args.undirect_dataset)
         dataset = get_dataset(args.undirect_dataset, path, split_type='full')
+
     print("Dataset is ", dataset, "\nIs DirectedData: ", args.IsDirectedData)
 
     if os.path.isdir(log_path) is False:
