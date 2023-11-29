@@ -14,7 +14,7 @@ def parse_args():
 
     # change less frequently
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
-    parser.add_argument('--dataset', type=str, default='dgl/cora', help='data set selection')
+    parser.add_argument('--dataset', type=str, default='WikipediaNetwork/chameleon', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
                         default='CiteSeer', help='data set selection as GraphSHA')

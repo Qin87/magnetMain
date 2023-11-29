@@ -421,10 +421,10 @@ def main(args):
             if CountNotImproved > 500:
                 print("Early stop at epoch: ", epoch)
                 break
-            # print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n", epoch, train_accSHA,
+            # print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n")
+            # print(epoch, train_accSHA,
             #       val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
-            # print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
-            #                                                                     test_f1 * 100))
+            print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
         print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
                                                                             test_f1 * 100))
