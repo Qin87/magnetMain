@@ -76,7 +76,7 @@ def main(args):
     if args.dataset.split('/')[0].startswith('dgl'):
         edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
         data_y = data.ndata['label']
-        data_train_mask, data_val_mask, data_test_mask = (
+        data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat']
         # print(data_x.shape, data.num_nodes)  # torch.Size([3327, 3703])
@@ -86,9 +86,8 @@ def main(args):
         data_y = data.y
         # data_train_mask, data_val_mask, data_test_mask = (data.train_mask[:,0].clone(), data.val_mask[:,0].clone(),
         #                                                   data.test_mask[:,0].clone())
-        data_train_mask, data_val_mask, data_test_mask = (data.train_mask.clone(), data.val_mask.clone(),
+        data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (data.train_mask.clone(), data.val_mask.clone(),
                                                           data.test_mask.clone())
-        # print("how many val,,", data_val_mask.sum())   # how many val,, tensor(59)
         data_x = data.x
         try:
             dataset_num_features = dataset.num_features
@@ -100,8 +99,6 @@ def main(args):
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
-    # print(torch.sum(data_train_mask), torch.sum(data_val_mask), torch.sum(data_test_mask), data_train_mask.shape,
-    #       data_val_mask.shape, data_test_mask.shape)  # tensor(11600) tensor(35380) tensor(5847) torch.Size([11701, 20])
     print("data_x", data_x.shape)  # [11701, 300])
 
     n_cls = data_y.max().item() + 1
@@ -110,16 +107,15 @@ def main(args):
     criterion = CrossEntropy().to(device)
 
     try:
-        splits = data_train_mask.shape[1]
+        splits = data_train_maskOrigin.shape[1]
         print("splits", splits)
         # print("deed, ", data_test_mask.shape)     # torch.Size([3327])
-        if len(data_test_mask.shape) == 1:
-            data_test_mask = data_test_mask.unsqueeze(1).repeat(1, splits)
+        if len(data_test_maskOrigin.shape) == 1:
+            data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
         # print("deed, ", data_test_mask.shape)     # torch.Size([3327, 1])
     except IndexError:
         splits = 1
 
-    results = np.zeros((splits, 4))
     # print(data.edge_index.shape)    # torch.Size([2, 298])
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
     # print("edge_index1", edge_index1.shape)    # torch.Size([2, 737])
@@ -139,28 +135,27 @@ def main(args):
     # print("edge_weight", edge_weight.shape, data.y.shape)
     del edge_index1, edge_weights1
     data = data.to(device)
-    # results = np.zeros((splits, 4))
     for split in range(splits):
-        print(split, data_test_mask.shape)
-        if split<4:
+        print(split)
+        if split<6:
             continue
         if splits == 1:
-            data_train_mask, data_val_mask, data_test_mask = (data_train_mask.clone(),
-                                                              data_val_mask.clone(),
-                                                              data_test_mask.clone())
+            data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
+                                                              data_val_maskOrigin.clone(),
+                                                              data_test_maskOrigin.clone())
         else:
             try:
-                data_train_mask, data_val_mask, data_test_mask = (data_train_mask[:, split].clone(),
-                                                              data_val_mask[:, split].clone(),
-                                                              data_test_mask[:, split].clone())
+                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
+                                                              data_val_maskOrigin[:, split].clone(),
+                                                              data_test_maskOrigin[:, split].clone())
             except IndexError:
-                print("test ,")
-                data_train_mask, data_val_mask = (data_train_mask[:, split].clone(),data_val_mask[:, split].clone())
+                print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
+                data_train_mask, data_val_mask = (data_train_maskOrigin[:, split].clone(),data_val_maskOrigin[:, split].clone())
                 try:
-                    data_test_mask = data_test_mask[:, 1].clone()
+                    data_test_mask = data_test_maskOrigin[:, 1].clone()
                 except IndexError:
-                    data_test_mask = data_test_mask.clone()
-
+                    print("testIndex necessary?")
+                    data_test_mask = data_test_maskOrigin.clone()
 
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
