@@ -62,10 +62,6 @@ def main(args):
 
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
-    # if not data.__contains__('edge_weight'):
-    #     data.edge_weight = None
-    # else:
-    #     data.edge_weight = torch.FloatTensor(data.edge_weight)
     try:
         data.edge_weight = torch.FloatTensor(data.edge_weight)
     except:
@@ -145,16 +141,26 @@ def main(args):
     data = data.to(device)
     # results = np.zeros((splits, 4))
     for split in range(splits):
-        # if split <7:
-        #     continue
+        print(split, data_test_mask.shape)
+        if split<4:
+            continue
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_mask.clone(),
                                                               data_val_mask.clone(),
                                                               data_test_mask.clone())
         else:
-            data_train_mask, data_val_mask, data_test_mask = (data_train_mask[:, split].clone(),
+            try:
+                data_train_mask, data_val_mask, data_test_mask = (data_train_mask[:, split].clone(),
                                                               data_val_mask[:, split].clone(),
                                                               data_test_mask[:, split].clone())
+            except IndexError:
+                print("test ,")
+                data_train_mask, data_val_mask = (data_train_mask[:, split].clone(),data_val_mask[:, split].clone())
+                try:
+                    data_test_mask = data_test_mask[:, 1].clone()
+                except IndexError:
+                    data_test_mask = data_test_mask.clone()
+
 
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
@@ -296,16 +302,12 @@ def main(args):
                     new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
                     new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
                     _new_y = data_y[sampling_src_idx.long()].clone()
-                    # print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
-                    # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)    #
                     new_y = torch.cat((data_y, _new_y), dim=0)  #
                     # print("y:", new_y.shape)  # y: torch.Size([542])
 
                     # get edge_weight
                     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
                                                                        new_y.size(-1), new_x.dtype)
-                    # print("edge_index1", edge_index1.shape)  # torch.Size([2, 737])
-                    # print("edge_weight1", edge_weights1)
                     edge_index1 = edge_index1.to(device)
                     edge_weights1 = edge_weights1.to(device)
                     if args.method_name[-2:] == 'ib':
@@ -371,12 +373,9 @@ def main(args):
                     out = model(new_x, new_edge_index)
                 prev_out = (out[:data_x.size(0)]).detach().clone()
 
-                # add_num = len(sampling_src_idx)  # Ben
-                # new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
-                # new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
                 _new_y = data_y[sampling_src_idx.long()].clone()
-                # print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
-                # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
+                print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
+                new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y_train = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y_train).backward()
             else:  # # without aug
@@ -426,7 +425,7 @@ def main(args):
             #       val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
             print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
-        print('test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(test_accSHA * 100, test_bacc * 100,
+        print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,
                                                                             test_f1 * 100))
 
 
