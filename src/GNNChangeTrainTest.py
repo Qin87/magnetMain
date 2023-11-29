@@ -137,7 +137,7 @@ def main(args):
     data = data.to(device)
     for split in range(splits):
         print(split)
-        if split<6:
+        if split<7:
             continue
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
