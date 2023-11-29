@@ -5,10 +5,10 @@ import time
 from sklearn.metrics import balanced_accuracy_score, f1_score
 import warnings
 
-from src.layer.DGCN import SymModel
-from src.layer.DiGCN import DiModel, DiGCN_IB
-from src.nets_graphSHA.gat import create_gat
-from src.nets_graphSHA.sage import create_sage
+from layer.DGCN import SymModel
+from layer.DiGCN import DiModel, DiGCN_IB
+from nets_graphSHA.gat import create_gat
+from nets_graphSHA.sage import create_sage
 
 warnings.filterwarnings("ignore")
 
@@ -16,13 +16,13 @@ warnings.filterwarnings("ignore")
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
     neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin
 # from layer.DiGCN import *
-from src.ArgsBen import parse_args
-from src.utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
+from ArgsBen import parse_args
+from utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
     generate_masksRatio
-from src.gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
-from src.neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
-from src.nets_graphSHA.gcn import create_gcn
-from src.utils.data_utils import get_dataset, load_directedData
+from gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
+from neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
+from nets_graphSHA.gcn import create_gcn
+from utils.data_utils import get_dataset, load_directedData
 from utils.Citation import *
 from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
