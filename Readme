@@ -17,4 +17,4 @@ WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
 'WikiCS/'       ---tested OK, too time consuming
 'cora_ml/'     ---tested OK,
 'citeseer_npz/'       ---tested OK  too much time
-'dgl/cora', 'dgl/citeseer'
+'dgl/cora', 'dgl/citeseer', and some other large datasets as shown in function
