@@ -110,14 +110,11 @@ def main(args):
     try:
         splits = data_train_maskOrigin.shape[1]
         print("splits", splits)
-        # print("deed, ", data_test_mask.shape)     # torch.Size([3327])
         if len(data_test_maskOrigin.shape) == 1:
             data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
-        # print("deed, ", data_test_mask.shape)     # torch.Size([3327, 1])
     except IndexError:
         splits = 1
 
-    # print(data.edge_index.shape)    # torch.Size([2, 298])
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
     # print("edge_index1", edge_index1.shape)    # torch.Size([2, 737])
     # print("edge_weight1", edge_weights1)
@@ -242,7 +239,6 @@ def main(args):
             lr=args.lr)  # from SHA
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
                                                                verbose=False)
-        #
         #     #################################
         #     # Train/Validation/Test
         #     #################################
@@ -366,7 +362,7 @@ def main(args):
                 prev_out = (out[:data_x.size(0)]).detach().clone()
 
                 _new_y = data_y[sampling_src_idx.long()].clone()
-                print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
+                # print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
                 new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y_train = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y_train).backward()
