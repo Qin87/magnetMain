@@ -138,8 +138,6 @@ def main(args):
     data = data.to(device)
     for split in range(splits):
         print(split)
-        if split<7:
-            continue
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
                                                               data_val_maskOrigin.clone(),
@@ -359,10 +357,8 @@ def main(args):
                     else:
                         new_SparseEdges = edge_index1
                         new_edge_weight = edge_weights1
-                    # print("edge_weight", new_edge_weight.shape, data.y.shape)
                     del edge_index1, edge_weights1
 
-                # print(new_x[0][:100], new_SparseEdges.shape, new_edge_weight.shape)   # torch.Size([2, 1918]) torch.Size([1918])
                 try:
                     out = model(new_x, new_SparseEdges, new_edge_weight)  #
                 except:
@@ -419,7 +415,7 @@ def main(args):
             # print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n")
             # print(epoch, train_accSHA,
             #       val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
-            print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,
                                                                             test_f1 * 100))
