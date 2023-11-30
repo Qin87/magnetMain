@@ -31,6 +31,7 @@ from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 # select cuda device if available
 cuda_device = 0
 device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
+print(device)
 
 
 def main(args):
