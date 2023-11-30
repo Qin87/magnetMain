@@ -147,11 +147,8 @@ def main(args):
             except IndexError:
                 print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
                 data_train_mask, data_val_mask = (data_train_maskOrigin[:, split].clone(),data_val_maskOrigin[:, split].clone())
-                try:
-                    data_test_mask = data_test_maskOrigin[:, 1].clone()
-                except IndexError:
-                    print("testIndex necessary?")
-                    data_test_mask = data_test_maskOrigin.clone()
+                data_test_mask = data_test_maskOrigin[:, 1].clone()
+
 
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
