@@ -16,8 +16,8 @@ from torch_geometric.datasets import WebKB, WikipediaNetwork, WikiCS
 import torch.nn as nn
 import torch.nn.functional as F
 
-from Citation import citation_datasets
-from preprocess import load_syn
+from .Citation import citation_datasets
+from .preprocess import load_syn
 
 
 class CrossEntropy(nn.Module):
