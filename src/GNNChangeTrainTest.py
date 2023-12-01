@@ -384,8 +384,8 @@ def main(args):
                 break
             end_time = time.time()
             epoch_time = end_time - start_time
-            print("Time consumed in this epoch: ", epoch_time)
-            print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            # print("Time consumed in this epoch: ", epoch_time)
+            # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,
                                                                             test_f1 * 100))
