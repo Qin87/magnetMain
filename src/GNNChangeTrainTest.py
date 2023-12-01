@@ -245,6 +245,7 @@ def main(args):
         # for epoch in tqdm.tqdm(range(args.epoch)):
         CountNotImproved = 0
         for epoch in range(args.epochs):
+            print(epoch)
             start_time = time.time()
             ####################
             # Train
