@@ -376,6 +376,12 @@ def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype):
     pi_sqrt[pi_sqrt == float('inf')] = 0
     pi_sqrt = pi_sqrt.diag()
 
+    # 将所有涉及的张量移动到同一个设备上
+    device = edge_index.device
+    p_ppr = p_ppr.to(device)
+    pi_inv_sqrt = pi_inv_sqrt.to(device)
+    pi_sqrt = pi_sqrt.to(device)
+
     # L_appr  Ben__L is a matrix of n*n, non zero is edges, value of L is edge weight,
     L = (torch.mm(torch.mm(pi_sqrt, p_ppr), pi_inv_sqrt) + torch.mm(torch.mm(pi_inv_sqrt, p_ppr.t()), pi_sqrt)) / 2.0
 
