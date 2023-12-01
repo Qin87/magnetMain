@@ -59,6 +59,7 @@ def main(args):
         os.makedirs(log_path)
 
     data = dataset[0]
+    data = data.to(device)
     # results = np.zeros((1, 4))
 
     global class_num_list, idx_info, prev_out, sample_times
@@ -222,6 +223,7 @@ def main(args):
 
         # print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
         model.to(device)
+        print(device)
         opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
         # opt = torch.optim.Adam(
         #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
