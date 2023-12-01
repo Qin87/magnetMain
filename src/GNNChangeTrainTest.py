@@ -333,7 +333,7 @@ def main(args):
                     out = model(new_x, new_SparseEdges, new_edge_weight)  #
                 except:
                     out = model(new_x, new_edge_index)
-                print(out[:data_x.size(0)])
+                # print(out[:data_x.size(0)])
                 prev_out = (out[:data_x.size(0)]).detach().clone()
                 prev_out = (out[:data_x.size(0)]).clone()
 
