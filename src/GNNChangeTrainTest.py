@@ -53,7 +53,7 @@ def main(args):
         path = osp.join(path, args.undirect_dataset)
         dataset = get_dataset(args.undirect_dataset, path, split_type='full')
 
-    print("Dataset is ", dataset, "\nIs DirectedData: ", args.IsDirectedData)
+    print("Dataset is ", dataset, "\nChosen from DirectedData: ", args.IsDirectedData)
 
     if os.path.isdir(log_path) is False:
         os.makedirs(log_path)
@@ -71,8 +71,6 @@ def main(args):
     if args.to_undirected:
         data.edge_index = to_undirected(data.edge_index)
 
-
-
     # copy GraphSHA
     if args.dataset.split('/')[0].startswith('dgl'):
         edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
@@ -80,15 +78,11 @@ def main(args):
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat']
-        # print(data_x.shape, data.num_nodes)  # torch.Size([3327, 3703])
         dataset_num_features = data_x.shape[1]
     else:
         edges = data.edge_index  # for torch_geometric librar
         data_y = data.y
-        # data_train_mask, data_val_mask, data_test_mask = (data.train_mask[:,0].clone(), data.val_mask[:,0].clone(),
-        #                                                   data.test_mask[:,0].clone())
-        data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (data.train_mask.clone(), data.val_mask.clone(),
-                                                          data.test_mask.clone())
+        data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (data.train_mask.clone(), data.val_mask.clone(),data.test_mask.clone())
         data_x = data.x
         try:
             dataset_num_features = dataset.num_features
@@ -116,8 +110,6 @@ def main(args):
         splits = 1
 
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
-    # print("edge_index1", edge_index1.shape)    # torch.Size([2, 737])
-    # print("edge_weight1", edge_weights1)
     edge_index1 = edge_index1.to(device)
     edge_weights1 = edge_weights1.to(device)
     if args.method_name[-2:] == 'ib':
@@ -130,7 +122,6 @@ def main(args):
     else:
         SparseEdges = edge_index1
         edge_weight = edge_weights1
-    # print("edge_weight", edge_weight.shape, data.y.shape)
     del edge_index1, edge_weights1
     data = data.to(device)
     for split in range(splits):
@@ -202,14 +193,14 @@ def main(args):
         # model = SAGE_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, dropout=args.dropout).to(
         #     device)
         elif args.method_name == 'GIN':
-            model = GIN_Model(data.x.size(-1), num_classes, filter_num=args.num_filter,
+            model = GIN_ModelBen(data.x.size(-1), num_classes, filter_num=args.num_filter,
                               dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'Cheb':
             model = ChebModel(data.x.size(-1), num_classes, K=args.K,
                               filter_num=args.num_filter, dropout=args.dropout,
                               layer=args.layer).to(device)
         elif args.method_name == 'APPNP':
-            model = APPNP_Model(data.x.size(-1), num_classes,
+            model = APPNP_ModelBen(data.x.size(-1), num_classes,
                                 filter_num=args.num_filter, alpha=args.alpha,
                                 dropout=args.dropout, layer=args.layer).to(device)
         # model = APPNP_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, alpha=args.alpha,
@@ -230,10 +221,10 @@ def main(args):
             raise NotImplementedError
 
         # print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
-        # opt = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
-        opt = torch.optim.Adam(
-            [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
-            lr=args.lr)  # from SHA
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
+        # opt = torch.optim.Adam(
+        #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
+        #     lr=args.lr)  # from SHA
         scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
                                                                verbose=False)
         #     #################################
@@ -290,7 +281,6 @@ def main(args):
                     new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
                     _new_y = data_y[sampling_src_idx.long()].clone()
                     new_y = torch.cat((data_y, _new_y), dim=0)  #
-                    # print("y:", new_y.shape)  # y: torch.Size([542])
 
                     # get edge_weight
                     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
@@ -313,35 +303,22 @@ def main(args):
 
                 else:
                     sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
-                    # print(len(sampling_src_idx), sampling_src_idx)  # 359 tensor([  58,   58,
                     beta = torch.distributions.beta.Beta(2, 2)
                     lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
-                    # print(torch.sum(train_edge_mask))
-                    # print(SparseEdges.shape,train_edge_mask.shape)  # torch.Size([2, 737]) torch.Size([298])
                     new_edge_index = duplicate_neighbor(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx)
-                    # print("New edge:,", new_edge_index.shape)   # New edge:, torch.Size([2, 470])
                     new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
 
-                    # add_num = new_x.shape[0] - data_x.shape[0]  # Ben
                     add_num = len(sampling_src_idx)  # Ben
                     new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
                     new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
                     _new_y = data_y[sampling_src_idx].clone()
-                    # print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
-                    # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)    #
                     new_y = torch.cat((data_y, _new_y), dim=0)  #
-                    # print("y:", new_y.shape)    # y: torch.Size([542])
-
-                    # get SparseEdges and edge_weight
                     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
                                                                        new_y.size(-1), new_x.dtype)
-                    # print("edge_index1", edge_index1.shape)  # torch.Size([2, 737])
-                    # print("edge_weight1", edge_weights1)
                     edge_index1 = edge_index1.to(device)
                     edge_weights1 = edge_weights1.to(device)
                     if args.method_name[-2:] == 'ib':
-                        edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),
-                                                                             new_x.dtype)
+                        edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),new_x.dtype)
                         edge_index2 = edge_index2.to(device)
                         edge_weights2 = edge_weights2.to(device)
                         new_SparseEdges = (edge_index1, edge_index2)
@@ -356,10 +333,11 @@ def main(args):
                     out = model(new_x, new_SparseEdges, new_edge_weight)  #
                 except:
                     out = model(new_x, new_edge_index)
+                print(out[:data_x.size(0)])
                 prev_out = (out[:data_x.size(0)]).detach().clone()
+                prev_out = (out[:data_x.size(0)]).clone()
 
-                _new_y = data_y[sampling_src_idx.long()].clone()
-                # print(data_x.shape, new_x.shape, add_num)  # torch.Size([183, 1703]) torch.Size([542, 1703]) 359
+                _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
                 new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y_train = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y_train).backward()
@@ -368,7 +346,6 @@ def main(args):
                     out = model(data_x, SparseEdges, edge_weight)
                 except:
                     out = model(data_x, edges)
-                # print(out[data_train_mask].shape, '\n', y.shape)  # torch.Size([250, 6]) torch.Size([250])
                 criterion(out[data_train_mask], data_y[data_train_mask]).backward()
 
             with torch.no_grad():
@@ -405,10 +382,10 @@ def main(args):
             if CountNotImproved > 500:
                 print("Early stop at epoch: ", epoch)
                 break
-            # print("Epoch train_accSHA, val_accSHA, tmp_test_acc, test_accSHA (For GraphSHA) \n")
-            # print(epoch, train_accSHA,
-            #       val_accSHA, tmp_test_acc, test_accSHA)  # watch this to check train process
-            # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            end_time = time.time()
+            epoch_time = end_time - start_time
+            print("Time consumed in this epoch: ", epoch_time)
+            print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,
                                                                             test_f1 * 100))

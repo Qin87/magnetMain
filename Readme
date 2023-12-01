@@ -13,7 +13,9 @@ Run other .py, only get results: model + original dataset( without imbalancelize
 
 Directed Dataset options:
 WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
-'WikipediaNetwork/chameleon', 'WikipediaNetwork/crocodile', 'WikipediaNetwork/squirrel'     ---tested OK, too much time in squirrel
+'WikipediaNetwork/chameleon', ---tested OK
+'WikipediaNetwork/crocodile', ---The dataset 'crocodile' is not available in case 'geom_gcn_preprocess=True'
+'WikipediaNetwork/squirrel'     ---tested OK,
 'WikiCS/'       ---tested OK, too time consuming
 'cora_ml/'     ---tested OK,
 'citeseer_npz/'       ---tested OK  too much time

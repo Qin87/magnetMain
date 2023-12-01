@@ -517,6 +517,46 @@ class ChebModel(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+class APPNP_ModelBen(torch.nn.Module):
+    def __init__(self, input_dim, out_dim, filter_num, alpha=0.1, dropout=False, layer=3):
+        super(APPNP_ModelBen, self).__init__()
+        self.dropout = dropout
+        self.line1 = nn.Linear(input_dim, filter_num)
+        self.line2 = nn.Linear(filter_num, filter_num)
+
+        self.conv1 = APPNP(K=10, alpha=alpha)
+        self.conv2 = APPNP(K=10, alpha=alpha)
+        self.layer = layer
+        if layer == 3:
+            self.line3 = nn.Linear(filter_num, filter_num)
+            self.conv3 = APPNP(K=10, alpha=alpha)
+
+        self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
+
+    def forward(self, x, edge_index):
+        # x, edge_index = data.x, data.edge_index
+
+        x = self.line1(x)
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+
+        x = self.line2(x)
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+
+        if self.layer == 3:
+            x = self.line3(x)
+            x = self.conv3(x, edge_index)
+            x = F.relu(x)
+
+        if self.dropout > 0:
+            x = F.dropout(x, self.dropout, training=self.training)
+        x = x.unsqueeze(0)
+        x = x.permute((0, 2, 1))
+        x = self.Conv(x)
+        x = x.permute((0, 2, 1)).squeeze()
+
+        return F.log_softmax(x, dim=1)
 
 class APPNP_Model(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, alpha=0.1, dropout=False, layer=3):
@@ -559,6 +599,41 @@ class APPNP_Model(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+class GIN_ModelBen(torch.nn.Module):
+    def __init__(self, input_dim, out_dim, filter_num, dropout=False, layer=2):
+        super(GIN_ModelBen, self).__init__()
+        self.dropout = dropout
+        self.line1 = nn.Linear(input_dim, filter_num)
+        self.line2 = nn.Linear(filter_num, filter_num)
+
+        self.conv1 = GINConv(self.line1)
+        self.conv2 = GINConv(self.line2)
+
+        self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
+        self.layer = layer
+        if layer == 3:
+            self.line3 = nn.Linear(filter_num, filter_num)
+            self.conv3 = GINConv(self.line3)
+
+    def forward(self, data):
+        x, edge_index = data.x, data.edge_index
+
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+        if self.layer == 3:
+            x = self.conv3(x, edge_index)
+            x = F.relu(x)
+
+        if self.dropout > 0:
+            x = F.dropout(x, self.dropout, training=self.training)
+        x = x.unsqueeze(0)
+        x = x.permute((0, 2, 1))
+        x = self.Conv(x)
+        x = x.permute((0, 2, 1)).squeeze()
+
+        return F.log_softmax(x, dim=1)
 
 class GIN_Model(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, dropout=False, layer=2):
