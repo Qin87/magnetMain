@@ -1,7 +1,10 @@
 # external files
+import pandas as pd
 import pickle as pk
 from datetime import datetime
 import time
+
+from openpyxl.reader.excel import load_workbook
 from sklearn.metrics import balanced_accuracy_score, f1_score
 import warnings
 
@@ -396,11 +399,43 @@ def main(args):
             epoch_time = end_time - start_time
             # print("Time consumed in this epoch: ", epoch_time)
             # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            Epoch_output_str = 'Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            df = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
+            try:
+                book = load_workbook(excel_file_path)
+                existing_data = pd.read_excel(excel_file_path)
+                combined_data = pd.concat([df, existing_data], ignore_index=True)
+            except FileNotFoundError:
+                combined_data = df
+            combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+        Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
+                                                                                              test_bacc * 100,
+                                                                                              test_f1 * 100)
+        df = pd.DataFrame({'Split_Output': [Split_output_str]})
+        try:
+            book = load_workbook(excel_file_path)
+            existing_data = pd.read_excel(excel_file_path)
+            combined_data = pd.concat([df, existing_data], ignore_index=True)
+        except FileNotFoundError:
+            combined_data = df
+        combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
 if __name__ == "__main__":
+    excel_file_path = 'output.xlsx'
     args = parse_args()
     print(args)
+    args_dict = vars(args)
+    df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
+    try:
+        book = load_workbook(excel_file_path)
+        existing_data = pd.read_excel(excel_file_path)
+        combined_data = pd.concat([df, existing_data], ignore_index=True)
+    except FileNotFoundError:
+        existing_data = pd.DataFrame()
+        combined_data = df
+    combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
+
     if args.debug:
         args.epochs = 1
     if args.dataset[:3] == 'syn':
