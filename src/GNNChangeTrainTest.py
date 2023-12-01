@@ -92,6 +92,7 @@ def main(args):
 
     data_y = data_y.long()
     num_classes = (data_y.max() - data_y.min() + 1).cpu().numpy()
+    num_classes = num_classes.to(device)
     # num_classes = (data_y.max() - data_y.min() + 1).detach().numpy()
 
     IsDirectedGraph = test_directed(edges)
@@ -110,6 +111,7 @@ def main(args):
             data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
     except IndexError:
         splits = 1
+
 
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
     edge_index1 = edge_index1.to(device)
