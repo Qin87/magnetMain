@@ -221,6 +221,7 @@ def main(args):
             raise NotImplementedError
 
         # print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+        model.to(device)
         opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
         # opt = torch.optim.Adam(
         #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
@@ -331,8 +332,12 @@ def main(args):
 
                 try:
                     out = model(new_x, new_SparseEdges, new_edge_weight)  #
-                except:
-                    out = model(new_x, new_edge_index)
+                except TypeError:
+                    try:
+                        out = model(new_x, new_edge_index)
+                    except TypeError:
+                        out= model(new_x)
+
                 # print(out[:data_x.size(0)])
                 prev_out = (out[:data_x.size(0)]).detach().clone()
                 prev_out = (out[:data_x.size(0)]).clone()

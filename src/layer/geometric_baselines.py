@@ -615,8 +615,10 @@ class GIN_ModelBen(torch.nn.Module):
             self.line3 = nn.Linear(filter_num, filter_num)
             self.conv3 = GINConv(self.line3)
 
-    def forward(self, data):
-        x, edge_index = data.x, data.edge_index
+    def forward(self, x, edge_index):
+        # def forward(self, data):
+        # print("GINBen: data", data)
+        # x, edge_index = data.x, data.edge_index
 
         x = self.conv1(x, edge_index)
         x = F.relu(x)

@@ -337,9 +337,7 @@ def get_appr_directed_adj(alpha, edge_index, num_nodes, dtype):
     from torch_geometric.utils import add_remaining_self_loops, add_self_loops, remove_self_loops
     from torch_scatter import scatter_add
 
-
-    edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
-                                     device=edge_index.device)
+    edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype, device=edge_index.device)
     fill_value = 1
     edge_index, edge_weight = add_self_loops(edge_index.long(), edge_weight, fill_value, num_nodes)
     row, col = edge_index
