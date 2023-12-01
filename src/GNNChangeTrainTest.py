@@ -91,7 +91,8 @@ def main(args):
             dataset_num_features = data_x.shape[1]
 
     data_y = data_y.long()
-    num_classes = (data_y.max() - data_y.min() + 1).detach().numpy()
+    num_classes = (data_y.max() - data_y.min() + 1).cpu().numpy()
+    # num_classes = (data_y.max() - data_y.min() + 1).detach().numpy()
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
