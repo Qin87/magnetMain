@@ -92,7 +92,7 @@ def main(args):
 
     data_y = data_y.long()
     num_classes = (data_y.max() - data_y.min() + 1).cpu().numpy()
-    num_classes = num_classes.to(device)
+    num_classes = torch.tensor(num_classes).to(device)
     # num_classes = (data_y.max() - data_y.min() + 1).detach().numpy()
 
     IsDirectedGraph = test_directed(edges)
