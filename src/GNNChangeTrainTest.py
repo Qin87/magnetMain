@@ -245,7 +245,6 @@ def main(args):
         # for epoch in tqdm.tqdm(range(args.epoch)):
         CountNotImproved = 0
         for epoch in range(args.epochs):
-            print(epoch)
             start_time = time.time()
             ####################
             # Train
@@ -397,10 +396,7 @@ def main(args):
             epoch_time = end_time - start_time
             # print("Time consumed in this epoch: ", epoch_time)
             # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-
-        print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,
-                                                                            test_f1 * 100))
-
+        print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
 if __name__ == "__main__":
     args = parse_args()
