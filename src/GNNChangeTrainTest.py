@@ -104,6 +104,7 @@ def main(args):
 
     n_cls = data_y.max().item() + 1
     data = data.to(device)
+    print(device)
 
     criterion = CrossEntropy().to(device)
 
@@ -422,7 +423,7 @@ def main(args):
         combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
 if __name__ == "__main__":
-    excel_file_path = 'output.xlsx'
+    excel_file_path = 'Poutput.xlsx'
     args = parse_args()
     print(args)
     args_dict = vars(args)
