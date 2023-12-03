@@ -20,3 +20,12 @@ WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
 'cora_ml/'     ---tested OK,
 'citeseer_npz/'       ---tested OK  too much time
 'dgl/cora', 'dgl/citeseer', and some other large datasets as shown in function
+
+tested GNNs:
+GIN,
+SAGE, GCN, GAT,
+APPNP,
+Cheb
+SymDiGCN
+DiG
+

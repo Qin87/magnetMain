@@ -1,4 +1,6 @@
 # external files
+import os
+
 import pandas as pd
 import pickle as pk
 from datetime import datetime
@@ -12,6 +14,7 @@ from layer.DGCN import SymModel
 from layer.DiGCN import DiModel, DiGCN_IB
 from nets_graphSHA.gat import create_gat
 from nets_graphSHA.sage import create_sage
+from src.utils.preprocess import F_in_out
 
 warnings.filterwarnings("ignore")
 
@@ -40,8 +43,8 @@ print(device)
 def main(args):
     if args.randomseed > 0:
         torch.manual_seed(args.randomseed)
-
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
+    print(date_time)
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
     if os.path.isdir(log_path) is False:
         try:
@@ -55,7 +58,7 @@ def main(args):
         path = args.data_path
         path = osp.join(path, args.undirect_dataset)
         dataset = get_dataset(args.undirect_dataset, path, split_type='full')
-
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     print("Dataset is ", dataset, "\nChosen from DirectedData: ", args.IsDirectedData)
 
     if os.path.isdir(log_path) is False:
@@ -95,7 +98,6 @@ def main(args):
     data_y = data_y.long()
     num_classes = (data_y.max() - data_y.min() + 1).cpu().numpy()
     num_classes = torch.tensor(num_classes).to(device)
-    # num_classes = (data_y.max() - data_y.min() + 1).detach().numpy()
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
@@ -130,6 +132,7 @@ def main(args):
         edge_weight = edge_weights1
     del edge_index1, edge_weights1
     data = data.to(device)
+
     for split in range(splits):
         print(split)
         if splits == 1:
@@ -178,26 +181,16 @@ def main(args):
         elif args.gdc == 'none':
             neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
                                                        device)
-
         log_str_full = ''
         if args.method_name == 'GAT':
-            # model = GATModel(data.x.size(-1), num_classes, heads=args.heads, filter_num=args.num_filter,
-            # 				  dropout=args.dropout, layer=args.layer).to(device)
             model = create_gat(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
                                nlayer=args.n_layer)  # SHA
         elif args.method_name == 'GCN':
             model = create_gcn(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
                                nlayer=args.n_layer)  # SHA
-        # model = GCNModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
-        # 				 dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'SAGE':
-            # model = SAGEModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
-            #                   dropout=args.dropout, layer=args.layer).to(device)
             model = create_sage(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
                                 nlayer=args.n_layer)
-
-        # model = SAGE_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, dropout=args.dropout).to(
-        #     device)
         elif args.method_name == 'GIN':
             model = GIN_ModelBen(data_x.size(-1), num_classes, filter_num=args.num_filter,
                               dropout=args.dropout, layer=args.layer).to(device)
@@ -211,15 +204,15 @@ def main(args):
                                 dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'DiG':
             if not args.method_name[-2:] == 'ib':
-                model = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+                model = DiModel(data_x.size(-1), num_classes, filter_num=args.num_filter,
                                 dropout=args.dropout, layer=args.layer).to(device)
             else:
-                model = DiGCN_IB(data.x.size(-1), hidden=args.num_filter,
+                model = DiGCN_IB(data_x.size(-1), hidden=args.num_filter,
                                  num_classes=num_classes, dropout=args.dropout,
                                  layer=args.layer).to(device)
 
         elif args.method_name == 'SymDiGCN':
-            model = SymModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
+            model = SymModel(data_x.size(-1), num_classes, filter_num=args.num_filter,
                              dropout=args.dropout, layer=args.layer).to(device)
         else:
             raise NotImplementedError
@@ -344,30 +337,46 @@ def main(args):
                     except TypeError:
                         out= model(new_x)
 
-                # print(out[:data_x.size(0)])
                 # prev_out = (out[:data_x.size(0)]).detach().clone()
-                prev_out = (out[:data_x.size(0)]).clone()
+                prev_out = (out[:data_x.size(0)]).clone().to(device)
 
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
                 new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y_train = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y_train).backward()
             else:  # # without aug
-                try:
+                if args.method_name == 'SymDiGCN':
+                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                                                                                         data_y.size(-1),
+                                                                                         data.edge_weight)
+                    out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                elif args.method_name == 'DiG':
                     out = model(data_x, SparseEdges, edge_weight)
-                except:
+                else:
                     out = model(data_x, edges)
                 criterion(out[data_train_mask], data_y[data_train_mask]).backward()
 
             with torch.no_grad():
                 model.eval()
-                out = model(data_x, edges[:, train_edge_mask])
+                if args.method_name == 'SymDiGCN':
+                    out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
+                elif args.method_name == 'DiG':
+                    out = model(data_x, SparseEdges, edge_weight)
+                else:
+                    out = model(data_x, edges[:, train_edge_mask])
+
                 val_loss = F.cross_entropy(out[data_val_mask], data_y[data_val_mask])
             opt.step()
             scheduler.step(val_loss)
             # from graphSHA
             model.eval()
-            logits = model(data_x, edges[:, train_edge_mask])
+            if args.method_name == 'SymDiGCN':
+                logits = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
+            elif args.method_name == 'DiG':
+                logits = model(data_x, SparseEdges, edge_weight)
+            else:
+                logits = model(data_x, edges[:, train_edge_mask])
+
             accs, baccs, f1s = [], [], []
             for mask in [data_train_mask, data_val_mask, data_test_mask]:
                 # print(mask.shape, logits.shape)  # torch.Size([3327, 1]) torch.Size([3327, 6])
@@ -395,15 +404,14 @@ def main(args):
                 break
             end_time = time.time()
             epoch_time = end_time - start_time
+            print(os.getcwd())
+
             # print("Time consumed in this epoch: ", epoch_time)
             print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
             Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
             df = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             try:
-                # book = load_workbook(excel_file_path, engine='openpyxl')
-                # book = load_workbook(excel_file_path)
                 existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
-                # existing_data = pd.read_excel(excel_file_path)
                 combined_data = pd.concat([df, existing_data], ignore_index=True)
             except FileNotFoundError:
                 combined_data = df
@@ -414,10 +422,7 @@ def main(args):
                                                                                               test_f1 * 100)
         df = pd.DataFrame({'Split_Output': [Split_output_str]})
         try:
-            # book = load_workbook(excel_file_path, engine='openpyxl')
-            # book = load_workbook(excel_file_path)
             existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
-            # existing_data = pd.read_excel(excel_file_path)
             combined_data = pd.concat([df, existing_data], ignore_index=True)
         except FileNotFoundError:
             combined_data = df
@@ -427,6 +432,7 @@ if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
     print(args)
+    print("Just after args", os.getcwd())
     excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'output.xlsx'
     print("excel_file_path is ", excel_file_path)
     args_dict = vars(args)

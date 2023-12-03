@@ -32,7 +32,7 @@ class CrossEntropy(nn.Module):
 def load_directedData(args):
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
-    print("dataset is ", load_func)  # Ben WebKB
+    print("dataset is ", load_func, subset)  # Ben WebKB
     if load_func == 'WebKB':
         load_func = WebKB
         dataset = load_func(root=args.data_path, name=subset)
@@ -43,8 +43,6 @@ def load_directedData(args):
         load_func = WikiCS
         dataset = load_func(root=args.data_path)
     elif load_func == 'cora_ml':
-
-        print(os.getcwd(), os.path.dirname(os.path.abspath(__file__)))  # /home/qin/Documents/PythonProject/DGNN_GraphSHA/src
         dataset = citation_datasets(root='../../dataset/data/tmp/cora_ml/cora_ml.npz')
     elif load_func == 'citeseer_npz':
         dataset = citation_datasets(root='../../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
