@@ -30,6 +30,7 @@ class CrossEntropy(nn.Module):
 
 
 def load_directedData(args):
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
     load_func, subset = args.dataset.split('/')[0], args.dataset.split('/')[1]
     print("dataset is ", load_func)  # Ben WebKB
     if load_func == 'WebKB':
@@ -42,9 +43,11 @@ def load_directedData(args):
         load_func = WikiCS
         dataset = load_func(root=args.data_path)
     elif load_func == 'cora_ml':
-        dataset = citation_datasets(root='../dataset/data/tmp/cora_ml/cora_ml.npz')
+
+        print(os.getcwd(), os.path.dirname(os.path.abspath(__file__)))  # /home/qin/Documents/PythonProject/DGNN_GraphSHA/src
+        dataset = citation_datasets(root='../../dataset/data/tmp/cora_ml/cora_ml.npz')
     elif load_func == 'citeseer_npz':
-        dataset = citation_datasets(root='../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
+        dataset = citation_datasets(root='../../dataset/data/tmp/citeseer_npz/citeseer_npz.npz')
     elif load_func == 'dgl':    # Ben
         subset = subset.lower()
         try:
@@ -269,27 +272,14 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
             # Compute degree
             degree = scatter_add(torch.ones_like(col[edge_mask]), col[edge_mask], dim_size=label.size(0)).to(row.device)
             degree = degree[cls_idx_list[i]]
-            # creating a new tensor that contains the elements from the original degree tensor
-            # at the positions specified by the values in cls_idx_list[i]
-
-            # Remove nodes with low degree first (number increases as round increases)
-            # Accumulation does not be problem since
-            # print("Degree is: ", degree, degree.shape, (r*remove_class_num_list[i])//n_round[i])
-            # # tensor([0, 5, 0, 4, 0, 4, 7, 0, 0, 0]) torch.Size([87]) 75
             _, remove_idx = torch.topk(degree, (r*remove_class_num_list[i])//n_round[i], largest=False)
             remove_idx = cls_idx_list[i][remove_idx]
-            # print("After index from class list: ", remove_idx)
-            # # the actual nodes
 
             remove_idx_list[i] = list(remove_idx.numpy())
-            # print("nodes to be removed: ", remove_idx_list[i])
-            # remove_idx.numpy() converts the remove_idx tensor to a NumPy array
 
     # Find removed nodes
     node_mask = label.new_ones(label.size(), dtype=torch.bool)
     node_mask[sum(remove_idx_list, [])] = False
-    # sum(remove_idx_list, []) is used to flatten this list into a single list of indices.
-    # print("node_mask is ", node_mask)
 
     # Remove connection with removed nodes
     row, col = edge_index[0], edge_index[1]
@@ -465,6 +455,4 @@ def generate_masksRatio(data_y, TrainRatio, ValRatio):
         test_mask[test_indices] = True
     print("train, val, test sample number: ", torch.sum(train_mask), torch.sum(val_mask), torch.sum(test_mask))
     return train_mask, val_mask, test_mask
-# Example usage:
-# train_mask, val_mask, test_mask = generate_masks(data_y, num_train_sample, n_Alldata)
 
