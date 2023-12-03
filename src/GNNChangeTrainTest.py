@@ -432,8 +432,10 @@ if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
     print(args)
-    print("Just after args", os.getcwd())
-    excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'output.xlsx'
+    if args.IsDirectedData:
+        excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'_'+args.dataset.split('/')[1]+'_output.xlsx'
+    else:
+        excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'_'+args.undirect_dataset+'_output.xlsx'
     print("excel_file_path is ", excel_file_path)
     args_dict = vars(args)
     df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])

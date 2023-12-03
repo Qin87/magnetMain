@@ -21,6 +21,14 @@ WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
 'citeseer_npz/'       ---tested OK  too much time
 'dgl/cora', 'dgl/citeseer', and some other large datasets as shown in function
 
+Tested Undirected Dataset options:
+CiteSeer
+Cora
+
+
+
+
+
 tested GNNs:
 GIN,
 SAGE, GCN, GAT,

@@ -8,16 +8,16 @@ def parse_args():
     # change frequently
     parser.add_argument('--withAug', type=bool, default=False, help='with Aug or not')
     parser.add_argument('--AugDirect', type=int, default=1, help='1 for one direction, 2 for bidirection aug edges, 4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
-    parser.add_argument('--method_name', type=str, default='DiG', help='method name')   # Tested OK: APPNP
+    parser.add_argument('--method_name', type=str, default='Cheb', help='method name')   # Tested OK: APPNP
     parser.add_argument('--seed', type=int, default=100,
                         help='random seed for training testing split/random graph generation')
 
     # change less frequentl
-    parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
-    parser.add_argument('--dataset', type=str, default='cora_ml/', help='data set selection')
+    parser.add_argument('--IsDirectedData', type=bool, default=False, help='the dataset is directed graph')
+    parser.add_argument('--dataset', type=str, default='WebKB/Cornell', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
-                        default='CiteSeer', help='data set selection as GraphSHA')
+                        default='PubMed', help='data set selection as GraphSHA')
 
     parser.add_argument('--MakeImbalance', type=bool, default=True, help='True for turn dataset into imbalanced')
     parser.add_argument('--CustomizeMask', type=bool, default=False,
