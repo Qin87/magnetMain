@@ -400,7 +400,8 @@ def main(args):
             df = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             try:
                 book = load_workbook(excel_file_path)
-                existing_data = pd.read_excel(excel_file_path)
+                existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
+                # existing_data = pd.read_excel(excel_file_path)
                 combined_data = pd.concat([df, existing_data], ignore_index=True)
             except FileNotFoundError:
                 combined_data = df
@@ -412,7 +413,8 @@ def main(args):
         df = pd.DataFrame({'Split_Output': [Split_output_str]})
         try:
             book = load_workbook(excel_file_path)
-            existing_data = pd.read_excel(excel_file_path)
+            existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
+            # existing_data = pd.read_excel(excel_file_path)
             combined_data = pd.concat([df, existing_data], ignore_index=True)
         except FileNotFoundError:
             combined_data = df
