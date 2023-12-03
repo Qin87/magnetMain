@@ -199,18 +199,16 @@ def main(args):
         # model = SAGE_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, dropout=args.dropout).to(
         #     device)
         elif args.method_name == 'GIN':
-            model = GIN_ModelBen(data.x.size(-1), num_classes, filter_num=args.num_filter,
+            model = GIN_ModelBen(data_x.size(-1), num_classes, filter_num=args.num_filter,
                               dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'Cheb':
-            model = ChebModel(data.x.size(-1), num_classes, K=args.K,
+            model = ChebModelBen(data_x.size(-1), num_classes, K=args.K,
                               filter_num=args.num_filter, dropout=args.dropout,
                               layer=args.layer).to(device)
         elif args.method_name == 'APPNP':
-            model = APPNP_ModelBen(data.x.size(-1), num_classes,
+            model = APPNP_ModelBen(data_x.size(-1), num_classes,
                                 filter_num=args.num_filter, alpha=args.alpha,
                                 dropout=args.dropout, layer=args.layer).to(device)
-        # model = APPNP_Link(x.size(-1), args.num_class_link, filter_num=args.num_filter, alpha=args.alpha,
-        #                    dropout=args.dropout, K=args.K).to(device)
         elif args.method_name == 'DiG':
             if not args.method_name[-2:] == 'ib':
                 model = DiModel(data.x.size(-1), num_classes, filter_num=args.num_filter,
@@ -346,7 +344,7 @@ def main(args):
                         out= model(new_x)
 
                 # print(out[:data_x.size(0)])
-                prev_out = (out[:data_x.size(0)]).detach().clone()
+                # prev_out = (out[:data_x.size(0)]).detach().clone()
                 prev_out = (out[:data_x.size(0)]).clone()
 
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
@@ -397,8 +395,8 @@ def main(args):
             end_time = time.time()
             epoch_time = end_time - start_time
             # print("Time consumed in this epoch: ", epoch_time)
-            # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-            Epoch_output_str = 'Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
             df = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             try:
                 book = load_workbook(excel_file_path)
@@ -421,7 +419,7 @@ def main(args):
         combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
 if __name__ == "__main__":
-    excel_file_path = 'Poutput.xlsx'
+    excel_file_path = 'Cheboutput.xlsx'
     args = parse_args()
     print(args)
     args_dict = vars(args)

@@ -484,6 +484,37 @@ class GCNModel(torch.nn.Module):
         return F.log_softmax(x, dim=1)
 
 
+class ChebModelBen(torch.nn.Module):
+    def __init__(self, input_dim, out_dim, filter_num, K, dropout=False, layer=2):
+        super(ChebModelBen, self).__init__()
+        self.dropout = dropout
+        self.conv1 = ChebConv(input_dim, filter_num, K)
+        self.conv2 = ChebConv(filter_num, filter_num, K)
+        self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
+
+        self.layer = layer
+        if layer == 3:
+            self.conv3 = ChebConv(filter_num, filter_num, K)
+
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = self.conv2(x, edge_index)
+        x = F.relu(x)
+
+        if self.layer == 3:
+            x = self.conv3(x, edge_index)
+            x = F.relu(x)
+
+        if self.dropout > 0:
+            x = F.dropout(x, self.dropout, training=self.training)
+        x = x.unsqueeze(0)
+        x = x.permute((0, 2, 1))
+        x = self.Conv(x)
+        x = x.permute((0, 2, 1)).squeeze()
+
+        return F.log_softmax(x, dim=1)
+
 class ChebModel(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, K, dropout=False, layer=2):
         super(ChebModel, self).__init__()
@@ -517,6 +548,7 @@ class ChebModel(torch.nn.Module):
 
         return F.log_softmax(x, dim=1)
 
+
 class APPNP_ModelBen(torch.nn.Module):
     def __init__(self, input_dim, out_dim, filter_num, alpha=0.1, dropout=False, layer=3):
         super(APPNP_ModelBen, self).__init__()
@@ -534,8 +566,6 @@ class APPNP_ModelBen(torch.nn.Module):
         self.Conv = nn.Conv1d(filter_num, out_dim, kernel_size=1)
 
     def forward(self, x, edge_index):
-        # x, edge_index = data.x, data.edge_index
-
         x = self.line1(x)
         x = self.conv1(x, edge_index)
         x = F.relu(x)
@@ -616,10 +646,6 @@ class GIN_ModelBen(torch.nn.Module):
             self.conv3 = GINConv(self.line3)
 
     def forward(self, x, edge_index):
-        # def forward(self, data):
-        # print("GINBen: data", data)
-        # x, edge_index = data.x, data.edge_index
-
         x = self.conv1(x, edge_index)
         x = F.relu(x)
         x = self.conv2(x, edge_index)
