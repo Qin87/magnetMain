@@ -422,9 +422,10 @@ def main(args):
 
 if __name__ == "__main__":
     start_sum_time = time.time()
-    excel_file_path = 'ChebGPUNoaug_output.xlsx'
     args = parse_args()
     print(args)
+    excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'output.xlsx'
+    print("excel_file_path is ", excel_file_path)
     args_dict = vars(args)
     df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
     combined_data = df
