@@ -400,7 +400,7 @@ def main(args):
             Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
             df = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             try:
-                book = load_workbook(excel_file_path, engine='openpyxl')
+                # book = load_workbook(excel_file_path, engine='openpyxl')
                 # book = load_workbook(excel_file_path)
                 existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
                 # existing_data = pd.read_excel(excel_file_path)
@@ -414,7 +414,7 @@ def main(args):
                                                                                               test_f1 * 100)
         df = pd.DataFrame({'Split_Output': [Split_output_str]})
         try:
-            book = load_workbook(excel_file_path, engine='openpyxl')
+            # book = load_workbook(excel_file_path, engine='openpyxl')
             # book = load_workbook(excel_file_path)
             existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
             # existing_data = pd.read_excel(excel_file_path)
