@@ -63,7 +63,6 @@ def main(args):
 
     data = dataset[0]
     data = data.to(device)
-    # results = np.zeros((1, 4))
 
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
@@ -115,7 +114,6 @@ def main(args):
             data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
     except IndexError:
         splits = 1
-
 
     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
     edge_index1 = edge_index1.to(device)
