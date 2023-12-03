@@ -425,13 +425,7 @@ if __name__ == "__main__":
     print(args)
     args_dict = vars(args)
     df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
-    try:
-        book = load_workbook(excel_file_path)
-        existing_data = pd.read_excel(excel_file_path)
-        combined_data = pd.concat([df, existing_data], ignore_index=True)
-    except FileNotFoundError:
-        existing_data = pd.DataFrame()
-        combined_data = df
+    combined_data = df
     combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
     if args.debug:
