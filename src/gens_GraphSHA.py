@@ -279,7 +279,7 @@ def neighbor_sampling_bidegree(total_node, edge_index, sampling_src_idx,
     """
     ## Exception Handling ##
     device = edge_index.device
-    sampling_src_idx = sampling_src_idx.clone().to(device)
+    sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
 
     # Find the nearest nodes and mix target pool
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
@@ -355,7 +355,7 @@ def neighbor_sampling_BiEdge_bidegree(total_node, edge_index, sampling_src_idx,
     """
     ## Exception Handling ##
     device = edge_index.device
-    sampling_src_idx = sampling_src_idx.clone().to(device)
+    sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
 
     # Find the nearest nodes and mix target pool
     sampling_src_idx = torch.tensor(sampling_src_idx, dtype=torch.long)  # Adjust dtype as needed
