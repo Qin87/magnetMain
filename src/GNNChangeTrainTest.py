@@ -406,6 +406,8 @@ def main(args):
             epoch_time = end_time - start_time
             print(os.getcwd())
 
+
+
             # print("Time consumed in this epoch: ", epoch_time)
             print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
             Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
@@ -415,7 +417,11 @@ def main(args):
                 combined_data = pd.concat([df, existing_data], ignore_index=True)
             except FileNotFoundError:
                 combined_data = df
-            combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
+            if not combined_data.empty:
+                with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
+                    combined_data.to_excel(writer, sheet_name = "Sheet2", index=False)
+            else:
+                print("DataFrame is empty. Not writing to the Excel file.")
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
         Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
                                                                                               test_bacc * 100,
@@ -426,7 +432,9 @@ def main(args):
             combined_data = pd.concat([df, existing_data], ignore_index=True)
         except FileNotFoundError:
             combined_data = df
-        combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
+        with pd.ExcelWriter(excel_file_path) as writer:
+            combined_data.to_excel(excel_file_path, sheet_name = "Sheet3", index=False, engine='openpyxl')
+
 
 if __name__ == "__main__":
     start_sum_time = time.time()
@@ -440,7 +448,13 @@ if __name__ == "__main__":
     args_dict = vars(args)
     df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
     combined_data = df
-    combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
+    if not combined_data.empty:
+        with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
+            combined_data.to_excel(writer, sheet_name="Sheet1", index=False)
+    else:
+        print("DataFrame is empty. Not writing to the Excel file.")
+    # with pd.ExcelWriter(excel_file_path) as writer:
+    # combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
     if args.debug:
         args.epochs = 1
