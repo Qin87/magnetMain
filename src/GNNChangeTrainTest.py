@@ -419,7 +419,7 @@ def main(args):
         combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
 if __name__ == "__main__":
-    excel_file_path = 'ChebGPUoutput.xlsx'
+    excel_file_path = 'ChebGPUNoaug_output.xlsx'
     args = parse_args()
     print(args)
     args_dict = vars(args)
