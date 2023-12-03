@@ -419,6 +419,7 @@ def main(args):
         combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
 
 if __name__ == "__main__":
+    start_sum_time = time.time()
     excel_file_path = 'ChebGPUNoaug_output.xlsx'
     args = parse_args()
     print(args)
@@ -512,3 +513,6 @@ if __name__ == "__main__":
             int(args.layer))  # Digraph and GCN
     args.save_name = save_name
     main(args)
+    end_sum_time = time.time()
+    total_time = end_sum_time- start_sum_time
+    print(total_time)
