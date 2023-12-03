@@ -251,6 +251,7 @@ def main(args):
             ####################
             # for loop for batch loading
             model.train()
+            model.to(device)
             opt.zero_grad()  # clear the gradients of the model's parameters.
 
             if args.withAug:
