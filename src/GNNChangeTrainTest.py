@@ -15,7 +15,7 @@ from layer.DGCN import SymModel
 from layer.DiGCN import DiModel, DiGCN_IB
 from nets_graphSHA.gat import create_gat
 from nets_graphSHA.sage import create_sage
-from src.utils.preprocess import F_in_out
+from utils.preprocess import F_in_out
 
 warnings.filterwarnings("ignore")
 
