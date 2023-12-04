@@ -469,7 +469,7 @@ def main(args):
             except:
                 current_directory = os.getcwd()
                 parent_directory = os.path.dirname(current_directory)
-                workbook = openpyxl.load_workbook(parent_directory+excel_file_path)
+                workbook = openpyxl.load_workbook(parent_directory+'/'+excel_file_path)
 
             if 'Epoch' in workbook.sheetnames:
                 workbook.remove(workbook['Epoch'])
