@@ -489,7 +489,13 @@ def main(args):
         existing_data3 = df3
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
         print(os.getcwd())
-        workbook = openpyxl.load_workbook(excel_file_path)
+        try:
+            workbook = openpyxl.load_workbook(excel_file_path)
+        except:
+            current_directory = os.getcwd()
+            parent_directory = os.path.dirname(current_directory)
+            os.chdir(parent_directory)
+            workbook = openpyxl.load_workbook(excel_file_path)
         if 'Split' in workbook.sheetnames:
             workbook.remove(workbook['Split'])
             workbook.save(excel_file_path)
