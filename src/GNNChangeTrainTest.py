@@ -464,8 +464,13 @@ def main(args):
             df2 = pd.concat([df2, existing_data2])
             existing_data2 = df2
             os.chdir(os.path.dirname(os.path.abspath(__file__)))
-            print(os.getcwd())
-            workbook = openpyxl.load_workbook(excel_file_path)
+            try:
+                workbook = openpyxl.load_workbook(excel_file_path)
+            except:
+                current_directory = os.getcwd()
+                parent_directory = os.path.dirname(current_directory)
+                workbook = openpyxl.load_workbook(parent_directory+excel_file_path)
+
             if 'Epoch' in workbook.sheetnames:
                 workbook.remove(workbook['Epoch'])
                 workbook.save(excel_file_path)
