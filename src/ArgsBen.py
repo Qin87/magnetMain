@@ -17,7 +17,7 @@ def parse_args():
     parser.add_argument('--dataset', type=str, default='WebKB/texas', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
-                        default='Cora', help='data set selection as GraphSHA')
+                        default='CiteSeer', help='data set selection as GraphSHA')
 
     parser.add_argument('--MakeImbalance', type=bool, default=True, help='True for turn dataset into imbalanced')
     parser.add_argument('--CustomizeMask', type=bool, default=False,
