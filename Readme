@@ -24,12 +24,9 @@ WebKB/Cornell, 'WebKB/texas', 'WebKB/wisconsin'         ---tested OK
 Tested Undirected Dataset options:
 CiteSeer
 Cora
-PUbMed: only can run in GPU3090
+PUbMed: too large so only can run in GPU3090
 
 To test:
-
-
-
 
 
 
