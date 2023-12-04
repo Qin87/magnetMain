@@ -1,6 +1,7 @@
 # external files
 import os
 
+import openpyxl
 import pandas as pd
 import pickle as pk
 from datetime import datetime
@@ -41,6 +42,27 @@ print(device)
 
 
 def main(args):
+
+    # ********************* write to excel
+    if args.IsDirectedData:
+        excel_file_path = str(args.withAug) + 'Aug_' + args.method_name + '_' + args.dataset.split('/')[
+            1] + '_output.xlsx'
+    else:
+        excel_file_path = str(
+            args.withAug) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + '_output.xlsx'
+    print("excel_file_path is ", excel_file_path)
+
+    writerBen = pd.ExcelWriter(excel_file_path, engine='xlsxwriter')    # a new excel file
+    args_dict = vars(args)
+    df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
+    combined_data = df
+    if not combined_data.empty:
+        combined_data.to_excel(writerBen, sheet_name="Args", index=False)
+    else:
+        print("DataFrame is empty. Not writing to the Excel file.")
+    writerBen._save()
+    # ********************
+
     if args.randomseed > 0:
         torch.manual_seed(args.randomseed)
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
@@ -132,7 +154,7 @@ def main(args):
         edge_weight = edge_weights1
     del edge_index1, edge_weights1
     data = data.to(device)
-
+    existing_data3 = pd.DataFrame()
     for split in range(splits):
         print(split)
         if splits == 1:
@@ -217,15 +239,14 @@ def main(args):
         else:
             raise NotImplementedError
 
-        # print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+        print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
         model.to(device)
         print(device)
         opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
         # opt = torch.optim.Adam(
         #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
         #     lr=args.lr)  # from SHA
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
-                                                               verbose=False)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,verbose=False)
         #     #################################
         #     # Train/Validation/Test
         #     #################################
@@ -235,14 +256,12 @@ def main(args):
         best_val_acc_f1 = 0
         saliency, prev_out = None, None
 
-        # for epoch in tqdm.tqdm(range(args.epoch)):
+        # writerBen._save()
+        existing_data2 = pd.DataFrame()
+        # df_Epoch = pd.DataFrame(columns=['Empty', 'Data'])
         CountNotImproved = 0
         for epoch in range(args.epochs):
             start_time = time.time()
-            ####################
-            # Train
-            ####################
-            # for loop for batch loading
             model.train()
             model.to(device)
             opt.zero_grad()  # clear the gradients of the model's parameters.
@@ -404,58 +423,41 @@ def main(args):
                 break
             end_time = time.time()
             epoch_time = end_time - start_time
-            print(os.getcwd())
-
-
-
-            # print("Time consumed in this epoch: ", epoch_time)
             print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
             Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
-            df = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
-            try:
-                existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
-                combined_data = pd.concat([df, existing_data], ignore_index=True)
-            except FileNotFoundError:
-                combined_data = df
-            if not combined_data.empty:
-                with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-                    combined_data.to_excel(writer, sheet_name = "Sheet2", index=False)
-            else:
-                print("DataFrame is empty. Not writing to the Excel file.")
+            df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
+            df2 = pd.concat([df2, existing_data2])
+            existing_data2 = df2
+            workbook = openpyxl.load_workbook(excel_file_path)
+            if 'Epoch' in workbook.sheetnames:
+                # Delete the specified sheet
+                workbook.remove(workbook['Epoch'])
+                workbook.save(excel_file_path)
+            workbook.close()
+            writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
+            df2.to_excel(writerBen, sheet_name="Epoch", index=False)
+            writerBen._save()
+
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
         Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
                                                                                               test_bacc * 100,
                                                                                               test_f1 * 100)
-        df = pd.DataFrame({'Split_Output': [Split_output_str]})
-        try:
-            existing_data = pd.read_excel(excel_file_path, engine='openpyxl')
-            combined_data = pd.concat([df, existing_data], ignore_index=True)
-        except FileNotFoundError:
-            combined_data = df
-        with pd.ExcelWriter(excel_file_path) as writer:
-            combined_data.to_excel(excel_file_path, sheet_name = "Sheet3", index=False, engine='openpyxl')
-
+        df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
+        df3 = pd.concat([df3, existing_data3])
+        existing_data3 = df3
+        workbook = openpyxl.load_workbook(excel_file_path)
+        if 'Split' in workbook.sheetnames:
+            workbook.remove(workbook['Split'])
+            workbook.save(excel_file_path)
+        workbook.close()
+        writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
+        df3.to_excel(writerBen, sheet_name="Split", index=False)
+        writerBen._save()
 
 if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
     print(args)
-    if args.IsDirectedData:
-        excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'_'+args.dataset.split('/')[1]+'_output.xlsx'
-    else:
-        excel_file_path = str(args.withAug)+ 'Aug_'+args.method_name+'_'+args.undirect_dataset+'_output.xlsx'
-    print("excel_file_path is ", excel_file_path)
-    args_dict = vars(args)
-    df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
-    combined_data = df
-    if not combined_data.empty:
-        with pd.ExcelWriter(excel_file_path, engine='openpyxl') as writer:
-            combined_data.to_excel(writer, sheet_name="Sheet1", index=False)
-    else:
-        print("DataFrame is empty. Not writing to the Excel file.")
-    # with pd.ExcelWriter(excel_file_path) as writer:
-    # combined_data.to_excel(excel_file_path, index=False, engine='openpyxl')
-
     if args.debug:
         args.epochs = 1
     if args.dataset[:3] == 'syn':
