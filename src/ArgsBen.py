@@ -13,11 +13,11 @@ def parse_args():
                         help='random seed for training testing split/random graph generation')
 
     # change less frequentl
-    parser.add_argument('--IsDirectedData', type=bool, default=False, help='the dataset is directed graph')
+    parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
     parser.add_argument('--dataset', type=str, default='WebKB/texas', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
-                        default='PubMed', help='data set selection as GraphSHA')
+                        default='Amazon-Photo', help='data set selection as GraphSHA')
 
     parser.add_argument('--MakeImbalance', type=bool, default=True, help='True for turn dataset into imbalanced')
     parser.add_argument('--CustomizeMask', type=bool, default=False,

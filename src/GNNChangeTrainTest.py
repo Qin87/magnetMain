@@ -25,7 +25,7 @@ from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, nei
 # from layer.DiGCN import *
 from ArgsBen import parse_args
 from utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
-    generate_masksRatio
+    generate_masksRatio, get_step_split
 from gens_GraphSHA import neighbor_sampling_bidegree, saliency_mixup, duplicate_neighbor, test_directed
 from neighbor_dist import get_PPR_adj, get_heat_adj, get_ins_neighbor_dist
 from nets_graphSHA.gcn import create_gcn
@@ -89,6 +89,8 @@ def main(args):
     data = dataset[0]
     data = data.to(device)
 
+
+
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
     try:
@@ -107,6 +109,37 @@ def main(args):
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat']
         dataset_num_features = data_x.shape[1]
+    # TODO: add import amazon datasets(photos, computers)
+    elif not args.IsDirectedData and args.undirect_dataset in ['Coauthor-CS', 'Amazon-Computers', 'Amazon-Photo']:
+        edges = data.edge_index  # for torch_geometric librar
+        data_y = data.y
+        data_x = data.x
+        dataset_num_features = dataset.num_features
+
+        data_y = data_y.long()
+        n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
+        n_cls = torch.tensor(n_cls).to(device)
+
+        train_idx, valid_idx, test_idx, train_node = get_step_split(imb_ratio=args.imb_ratio,
+                                                                    valid_each=int(data.x.shape[0] * 0.1 / n_cls),
+                                                                    labeling_ratio=0.1,
+                                                                    all_idx=[i for i in range(data.x.shape[0])],
+                                                                    all_label=data.y.cpu().detach().numpy(),
+                                                                    nclass=n_cls)
+
+        data_train_mask = torch.zeros(data.x.shape[0]).bool().to(device)
+        data_val_mask = torch.zeros(data.x.shape[0]).bool().to(device)
+        data_test_mask = torch.zeros(data.x.shape[0]).bool().to(device)
+        data_train_mask[train_idx] = True
+        data_val_mask[valid_idx] = True
+        data_test_mask[test_idx] = True
+        train_idx = data_train_mask.nonzero().squeeze()
+        train_edge_mask = torch.ones(data.edge_index.shape[1], dtype=torch.bool)
+
+        class_num_list = [len(item) for item in train_node]
+        idx_info = [torch.tensor(item) for item in train_node]
+    elif dataset == 'Amazon-Photo':
+        pass
     else:
         edges = data.edge_index  # for torch_geometric librar
         data_y = data.y
@@ -117,9 +150,7 @@ def main(args):
         except:
             dataset_num_features = data_x.shape[1]
 
-    data_y = data_y.long()
-    num_classes = (data_y.max() - data_y.min() + 1).cpu().numpy()
-    num_classes = torch.tensor(num_classes).to(device)
+
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
@@ -128,6 +159,10 @@ def main(args):
     n_cls = data_y.max().item() + 1
     data = data.to(device)
     print(device)
+
+    data_y = data_y.long()
+    n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
+    n_cls = torch.tensor(n_cls).to(device)
 
     criterion = CrossEntropy().to(device)
 
@@ -214,27 +249,27 @@ def main(args):
             model = create_sage(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
                                 nlayer=args.n_layer)
         elif args.method_name == 'GIN':
-            model = GIN_ModelBen(data_x.size(-1), num_classes, filter_num=args.num_filter,
+            model = GIN_ModelBen(data_x.size(-1), n_cls, filter_num=args.num_filter,
                               dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'Cheb':
-            model = ChebModelBen(data_x.size(-1), num_classes, K=args.K,
+            model = ChebModelBen(data_x.size(-1), n_cls, K=args.K,
                               filter_num=args.num_filter, dropout=args.dropout,
                               layer=args.layer).to(device)
         elif args.method_name == 'APPNP':
-            model = APPNP_ModelBen(data_x.size(-1), num_classes,
+            model = APPNP_ModelBen(data_x.size(-1), n_cls,
                                 filter_num=args.num_filter, alpha=args.alpha,
                                 dropout=args.dropout, layer=args.layer).to(device)
         elif args.method_name == 'DiG':
             if not args.method_name[-2:] == 'ib':
-                model = DiModel(data_x.size(-1), num_classes, filter_num=args.num_filter,
+                model = DiModel(data_x.size(-1), n_cls, filter_num=args.num_filter,
                                 dropout=args.dropout, layer=args.layer).to(device)
             else:
                 model = DiGCN_IB(data_x.size(-1), hidden=args.num_filter,
-                                 num_classes=num_classes, dropout=args.dropout,
+                                 n_cls=n_cls, dropout=args.dropout,
                                  layer=args.layer).to(device)
 
         elif args.method_name == 'SymDiGCN':
-            model = SymModel(data_x.size(-1), num_classes, filter_num=args.num_filter,
+            model = SymModel(data_x.size(-1), n_cls, filter_num=args.num_filter,
                              dropout=args.dropout, layer=args.layer).to(device)
         else:
             raise NotImplementedError
@@ -428,9 +463,10 @@ def main(args):
             df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             df2 = pd.concat([df2, existing_data2])
             existing_data2 = df2
+            os.chdir(os.path.dirname(os.path.abspath(__file__)))
+            print(os.getcwd())
             workbook = openpyxl.load_workbook(excel_file_path)
             if 'Epoch' in workbook.sheetnames:
-                # Delete the specified sheet
                 workbook.remove(workbook['Epoch'])
                 workbook.save(excel_file_path)
             workbook.close()
@@ -445,6 +481,8 @@ def main(args):
         df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
         df3 = pd.concat([df3, existing_data3])
         existing_data3 = df3
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        print(os.getcwd())
         workbook = openpyxl.load_workbook(excel_file_path)
         if 'Split' in workbook.sheetnames:
             workbook.remove(workbook['Split'])
