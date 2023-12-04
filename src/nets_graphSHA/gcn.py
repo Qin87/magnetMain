@@ -122,7 +122,9 @@ class GCNConv(MessagePassing):
         self.temp_weight = torch.nn.Linear(in_channels, out_channels, bias=False)
         # bias false.
         if bias:
-            self.bias = Parameter(torch.Tensor(out_channels))
+            # self.bias = Parameter(torch.Tensor(out_channels))
+            self.bias = Parameter(torch.Tensor(out_channels).float())
+
         else:
             self.register_parameter('bias', None)
 

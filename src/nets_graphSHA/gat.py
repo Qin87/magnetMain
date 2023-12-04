@@ -88,9 +88,9 @@ class GATConv(MessagePassing):
         self.att_r = Parameter(torch.Tensor(1, heads, out_channels))
 
         if bias and concat:
-            self.bias = Parameter(torch.Tensor(heads * out_channels))
+            self.bias = Parameter(torch.Tensor(heads * out_channels).float())
         elif bias and not concat:
-            self.bias = Parameter(torch.Tensor(out_channels))
+            self.bias = Parameter(torch.Tensor(out_channels).float())
         else:
             self.register_parameter('bias', None)
 
