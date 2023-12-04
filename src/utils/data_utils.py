@@ -219,8 +219,9 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     ratio = torch.tensor(ratio, dtype=torch.float32)   # for mu to convert to numpy
     # Move the tensor to CPU before using it in numpy operations
     ratio = ratio.cpu()
+    print(ratio.device)
 
-    mu = np.power(1/ratio.detach().numpy(), 1/(n_cls - 1))
+    mu = np.power(1/ratio.detach().cpu().numpy(), 1/(n_cls - 1))
 
     mu = torch.tensor(mu, dtype=torch.float32, device=ratio.device)
 
