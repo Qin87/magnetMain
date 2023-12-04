@@ -216,6 +216,10 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     assert (torch.arange(len(n_data))[indices][torch.tensor(inv_indices)] - torch.arange(len(n_data))).sum().abs() < 1e-12
 
     # Compute the number of nodes for each class following LT rules
+    ratio = torch.tensor(ratio, dtype=torch.float32)   # for mu to convert to numpy
+    # Move the tensor to CPU before using it in numpy operations
+    ratio = ratio.cpu().numpy()
+
     mu = np.power(1/ratio, 1/(n_cls - 1))
     # print(mu, 1/ratio, 1/(n_cls-1))     # 0.4641588833612779 0.01 0.16666666666666666
     n_round = []
