@@ -52,7 +52,7 @@ def main(args):
             args.withAug) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + '_output.xlsx'
     print("excel_file_path is ", excel_file_path)
 
-    writerBen = pd.ExcelWriter(excel_file_path, engine='xlsxwriter')    # a new excel file
+    writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')    # a new excel file
     args_dict = vars(args)
     df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
     combined_data = df
