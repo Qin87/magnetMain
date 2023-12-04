@@ -273,8 +273,10 @@ def main(args):
                              dropout=args.dropout, layer=args.layer).to(device)
         else:
             raise NotImplementedError
-
-        print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+        try:
+            print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+        except:
+            pass
         model.to(device)
         print(device)
         opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
@@ -414,6 +416,7 @@ def main(args):
                 model.eval()
                 if args.method_name == 'SymDiGCN':
                     out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
+                    # print(model)
                 elif args.method_name == 'DiG':
                     out = model(data_x, SparseEdges, edge_weight)
                 else:
