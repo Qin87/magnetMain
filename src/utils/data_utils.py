@@ -220,6 +220,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     # Move the tensor to CPU before using it in numpy operations
     ratio = ratio.cpu()
     print("mu ", ratio.device, n_cls.device)
+    n_cls = n_cls.cpu()
 
     mu = np.power(1/ratio.detach().cpu().numpy(), 1/(n_cls - 1))
 
