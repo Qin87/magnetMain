@@ -539,4 +539,4 @@ if __name__ == "__main__":
     main(args)
     end_sum_time = time.time()
     total_time = end_sum_time- start_sum_time
-    print(total_time)
+    print("Total time(all splits): ", total_time)
