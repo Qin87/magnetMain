@@ -495,7 +495,7 @@ def main(args):
         df3 = pd.concat([df3, existing_data3])
         existing_data3 = df3
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
-        print(os.getcwd())
+        # print(os.getcwd())
         try:
             workbook = openpyxl.load_workbook(excel_file_path)
         except:
