@@ -1,0 +1,26 @@
+cuda:2
+Namespace(withAug=True, AugDirect=20, method_name='GAT', seed=100, IsDirectedData=False, dataset='WebKB/texas', undirect_dataset='CiteSeer', MakeImbalance=True, CustomizeMask=False, K=2, heads=8, log_root='../logs/', log_path='test', data_path='../dataset/data/tmp/', epochs=1500, num_filter=2, p_q=0.95, p_inter=0.1, dropout=0.0, debug=False, new_setting=False, layer=2, lr=0.005, l2=0.0005, to_undirected=False, alpha=0.1, randomseed=-1, imb_ratio=100, n_layer=2, feat_dim=64, warmup=5, epoch=900, tau=2, max=False, no_mask=False, gdc='ppr')
+excel_file_path is  TrueAug_GAT_CiteSeer_output.xlsx
+12-04-18:50:41
+Dataset is  CiteSeer() 
+Chosen from DirectedData:  False
+Num of bidrected edges: 4552, total num of edges: 9104
+This is directed graph:  False
+data_x torch.Size([3327, 3703])
+cuda:2
+0
+mu  cpu cpu
+Traceback (most recent call last):
+  File "/home/qj2004/magnet/src/GNNChangeTrainTest.py", line 589, in <module>
+    main(args)
+  File "/home/qj2004/magnet/src/GNNChangeTrainTest.py", line 243, in main
+    model = create_gat(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+  File "/home/qj2004/magnet/src/nets_graphSHA/gat.py", line 273, in create_gat
+    model = StandGAT2(nfeat, nhid, nclass, dropout,nlayer)
+  File "/home/qj2004/magnet/src/nets_graphSHA/gat.py", line 221, in __init__
+    self.conv2 = GATConv(nhid,  nclass,   heads=1, concat=False)
+  File "/home/qj2004/magnet/src/nets_graphSHA/gat.py", line 93, in __init__
+    self.bias = Parameter(torch.Tensor(out_channels))
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/parameter.py", line 37, in __new__
+    return torch.Tensor._make_subclass(cls, data, requires_grad)
+RuntimeError: Only Tensors of floating point and complex dtype can require gradients

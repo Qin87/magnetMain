@@ -1,0 +1,26 @@
+cuda:0
+Namespace(withAug=True, AugDirect=20, method_name='Cheb', seed=100, IsDirectedData=False, dataset='WebKB/texas', undirect_dataset='PubMed', MakeImbalance=True, CustomizeMask=False, K=2, heads=8, log_root='../logs/', log_path='test', data_path='../dataset/data/tmp/', epochs=1500, num_filter=2, p_q=0.95, p_inter=0.1, dropout=0.0, debug=False, new_setting=False, layer=2, lr=0.005, l2=0.0005, to_undirected=False, alpha=0.1, randomseed=-1, imb_ratio=100, n_layer=2, feat_dim=64, warmup=5, epoch=900, tau=2, max=False, no_mask=False, gdc='ppr')
+excel_file_path is  TrueAug_Cheb_PubMed_output.xlsx
+12-04-17:45:47
+Dataset is  PubMed() 
+Chosen from DirectedData:  False
+Num of bidrected edges: 44324, total num of edges: 88648
+This is directed graph:  False
+data_x torch.Size([19717, 500])
+cuda:0
+0
+mu  cpu cpu
+ChebModelBen(
+  (conv1): ChebConv(500, 2, K=2, normalization=sym)
+  (conv2): ChebConv(2, 2, K=2, normalization=sym)
+  (Conv): Conv1d(2, 3, kernel_size=(1,), stride=(1,))
+)
+cuda:0
+Traceback (most recent call last):
+  File "/home/qj2004/magnet/src/GNNChangeTrainTest.py", line 589, in <module>
+    int(args.num_filter)) + 'alpha' + str(int(100 * args.alpha)) + 'layer' + str(
+  File "/home/qj2004/magnet/src/GNNChangeTrainTest.py", line 370, in main
+    _new_y = data_y[sampling_src_idx].clone()
+  File "/home/qj2004/magnet/src/utils/edge_data.py", line 386, in get_appr_directed_adj
+    L = (torch.mm(torch.mm(pi_sqrt, p_ppr), pi_inv_sqrt) + torch.mm(torch.mm(pi_inv_sqrt, p_ppr.t()), pi_sqrt)) / 2.0
+RuntimeError: CUDA out of memory. Tried to allocate 4.17 GiB (GPU 0; 23.69 GiB total capacity; 14.06 GiB already allocated; 1.98 GiB free; 15.46 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF

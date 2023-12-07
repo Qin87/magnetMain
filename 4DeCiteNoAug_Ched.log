@@ -1,0 +1,34 @@
+cuda:0
+Namespace(withAug=False, AugDirect=20, method_name='Cheb', seed=100, IsDirectedData=False, dataset='WebKB/texas', undirect_dataset='CiteSeer', MakeImbalance=True, CustomizeMask=False, K=2, heads=8, log_root='../logs/', log_path='test', data_path='../dataset/data/tmp/', epochs=1500, num_filter=2, p_q=0.95, p_inter=0.1, dropout=0.0, debug=False, new_setting=False, layer=2, lr=0.005, l2=0.0005, to_undirected=False, alpha=0.1, randomseed=-1, imb_ratio=100, n_layer=2, feat_dim=64, warmup=5, epoch=900, tau=2, max=False, no_mask=False, gdc='ppr')
+excel_file_path is  FalseAug_Cheb_CiteSeer_output.xlsx
+12-04-18:36:33
+Dataset is  CiteSeer() 
+Chosen from DirectedData:  False
+Num of bidrected edges: 4552, total num of edges: 9104
+This is directed graph:  False
+data_x torch.Size([3327, 3703])
+cuda:0
+0
+mu  cpu cpu
+ChebModelBen(
+  (conv1): ChebConv(3703, 2, K=2, normalization=sym)
+  (conv2): ChebConv(2, 2, K=2, normalization=sym)
+  (Conv): Conv1d(2, 6, kernel_size=(1,), stride=(1,))
+)
+cuda:0
+Traceback (most recent call last):
+  File "/home/qj2004/magnet/src/GNNChangeTrainTest.py", line 589, in <module>
+    main(args)
+  File "/home/qj2004/magnet/src/GNNChangeTrainTest.py", line 410, in main
+    out = model(data_x, edges)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/qj2004/magnet/src/layer/geometric_baselines.py", line 513, in forward
+    x = self.Conv(x)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/conv.py", line 307, in forward
+    return self._conv_forward(input, self.weight, self.bias)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/conv.py", line 303, in _conv_forward
+    return F.conv1d(input, weight, bias, self.stride,
+RuntimeError: Unable to find a valid cuDNN algorithm to run convolution
