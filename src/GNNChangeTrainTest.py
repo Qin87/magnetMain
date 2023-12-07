@@ -206,7 +206,6 @@ def main(args):
                 data_train_mask, data_val_mask = (data_train_maskOrigin[:, split].clone(),data_val_maskOrigin[:, split].clone())
                 data_test_mask = data_test_maskOrigin[:, 1].clone()
 
-
         if args.CustomizeMask:
             data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
         stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
@@ -279,7 +278,10 @@ def main(args):
             pass
         model.to(device)
         print(device)
-        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
+        if CountNotImproved>100:
+            opt = torch.optim.Adam(model.parameters(), lr=10*args.lr, weight_decay=args.l2)   # less accuracy*
+        else:
+            opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)   # less accuracy
         # opt = torch.optim.Adam(
         #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
         #     lr=args.lr)  # from SHA
