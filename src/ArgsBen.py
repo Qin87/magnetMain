@@ -11,7 +11,7 @@ def parse_args():
     parser.add_argument('--method_name', type=str, default='SymDiGCN', help='method name')   # Tested OK: APPNP
     parser.add_argument('--seed', type=int, default=100,
                         help='random seed for training testing split/random graph generation')
-    parser.add_argument('--GPUdevice', type=int, help='gpu 0,1,2 for selene')
+    parser.add_argument('--GPUdevice', type=int, default=0, help='gpu 0,1,2 for selene')
 
     # change less frequentl
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
