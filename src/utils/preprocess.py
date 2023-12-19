@@ -236,8 +236,11 @@ def F_in_out(edge_index, size, edge_weight=None):
     if edge_weight is not None:
         a = sp.coo_matrix((edge_weight, edge_index), shape=(size, size)).tocsc()
     else:
-        a = sp.coo_matrix((np.ones(len(edge_index[0])), edge_index), shape=(size, size)).tocsc()
-    
+        try:
+            a = sp.coo_matrix((np.ones(len(edge_index[0])), edge_index), shape=(size, size)).tocsc()
+        except:
+            a = sp.coo_matrix((np.ones(len(edge_index[0])), edge_index.cpu().numpy()), shape=(size, size)).tocsc()   # for GPU run
+
     out_degree = np.array(a.sum(axis=0))[0]
     out_degree[out_degree == 0] = 1
 

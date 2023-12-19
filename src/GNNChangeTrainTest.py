@@ -150,8 +150,6 @@ def main(args):
         except:
             dataset_num_features = data_x.shape[1]
 
-
-
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
     print("data_x", data_x.shape)  # [11701, 300])
