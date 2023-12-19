@@ -273,4 +273,10 @@ def F_in_out(edge_index, size, edge_weight=None):
     
     in_weight  = torch.from_numpy(A_in.data).float()
     out_weight = torch.from_numpy(A_out.data).float()
+
+    tensors = [edge_in, edge_out, in_weight, out_weight]
+    for i in range(len(tensors)):
+        tensors[i] = tensors[i].to(edge_index.device)
+    edge_in, edge_out, in_weight, out_weight = tensors
+
     return to_undirected(edge_index), edge_in, in_weight, edge_out, out_weight
