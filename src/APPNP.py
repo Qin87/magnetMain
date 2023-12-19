@@ -1,4 +1,3 @@
-
 # internal files
 from gens_GraphSHA import *
 from parser import *

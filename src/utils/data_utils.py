@@ -221,8 +221,6 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     if not isinstance(n_cls, int):
         ratio = ratio.cpu()
         n_cls = n_cls.cpu()
-    print("mu ", ratio.device, n_cls.device)
-
     mu = np.power(1/ratio.detach().cpu().numpy(), 1/(n_cls - 1))
 
     mu = torch.tensor(mu, dtype=torch.float32, device=ratio.device)

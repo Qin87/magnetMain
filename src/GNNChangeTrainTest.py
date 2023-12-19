@@ -392,7 +392,7 @@ def main(args):
                     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
                                                                                          data_y.size(-1),
                                                                                          data.edge_weight)
-                    out = model(data.x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                    out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
                 else:
                     try:
                         out = model(new_x, new_SparseEdges, new_edge_weight)  #
@@ -402,15 +402,12 @@ def main(args):
                         except TypeError:
                             out= model(new_x)
 
-                # prev_out = (out[:data_x.size(0)]).detach().clone()
                 prev_out = (out[:data_x.size(0)]).clone().to(device)
 
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
-                new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
-                new_y_train = torch.cat((data_y[data_train_mask], _new_y), dim=0)
-                print(out.shape, data_train_mask.shape, data_y.shape, new_train_mask.shape)  # torch.Size([3327, 6]) torch.Size([3327]) torch.Size([3327])
-                # criterion(out, new_y_train).backward()
-                criterion(out[new_train_mask], new_y_train).backward()
+                new_y = torch.cat((data.y[data_train_mask], _new_y), dim=0)
+                criterion(out[new_train_mask], new_y).backward()
+
             else:  # # without aug
                 if args.method_name == 'SymDiGCN':
                     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
