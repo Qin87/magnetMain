@@ -411,6 +411,7 @@ def main(args):
                     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
                                                                                          data_y.size(-1),
                                                                                          data.edge_weight)
+                    print("device check:", data_x.device, edges.device, edge_in.device, in_weight.device, edge_out.device, out_weight.device)
                     out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
                 elif args.method_name == 'DiG':
                     out = model(data_x, SparseEdges, edge_weight)
