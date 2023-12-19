@@ -397,7 +397,7 @@ def main(args):
                 prev_out = (out[:data_x.size(0)]).clone().to(device)
 
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
-                new_y = torch.cat((data.y[data_train_mask], _new_y), dim=0)
+                new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y).backward()
 
             else:  # # without aug
@@ -513,6 +513,7 @@ if __name__ == "__main__":
     print(args)
 
     cuda_device = args.GPUdevice
+    print(cuda_device)
     device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
     print(device)
     if args.debug:
