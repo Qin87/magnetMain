@@ -156,7 +156,6 @@ def main(args):
 
     n_cls = data_y.max().item() + 1
     data = data.to(device)
-    print(device)
 
     data_y = data_y.long()
     n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
@@ -189,7 +188,7 @@ def main(args):
     data = data.to(device)
     existing_data3 = pd.DataFrame()
     for split in range(splits):
-        print(split)
+        print("split: ", split)
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
                                                               data_val_maskOrigin.clone(),
@@ -275,8 +274,6 @@ def main(args):
         except:
             pass
         model.to(device)
-        print(device)
-
         #     #################################
         #     # Train/Validation/Test
         #     #################################

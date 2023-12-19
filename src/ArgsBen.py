@@ -13,7 +13,7 @@ def parse_args():
                         help='random seed for training testing split/random graph generation')
 
     # change less frequentl
-    parser.add_argument('--IsDirectedData', type=bool, default=False, help='the dataset is directed graph')
+    parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
     parser.add_argument('--dataset', type=str, default='WebKB/texas', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
