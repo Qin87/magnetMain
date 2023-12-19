@@ -521,9 +521,6 @@ if __name__ == "__main__":
         print("CUDA is not available, using CPU.")
         device = torch.device("cpu")
 
-    # print(cuda_device, cuda_device.type)
-    # device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
-    # print(device)
     if args.debug:
         args.epochs = 1
     if args.dataset[:3] == 'syn':
