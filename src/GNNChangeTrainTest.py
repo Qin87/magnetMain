@@ -36,13 +36,10 @@ from torch_geometric.utils import to_undirected
 from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 
 # select cuda device if available
-cuda_device = 2
-device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
-print(device)
+
 
 
 def main(args):
-
     # ********************* write to excel
     if args.IsDirectedData:
         excel_file_path = str(args.withAug) + 'Aug_' + args.method_name + '_' + args.dataset.split('/')[
@@ -514,6 +511,10 @@ if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
     print(args)
+
+    cuda_device = args.GPUdevice
+    device = torch.device("cuda:%d" % cuda_device if torch.cuda.is_available() else "cpu")
+    print(device)
     if args.debug:
         args.epochs = 1
     if args.dataset[:3] == 'syn':
