@@ -8,7 +8,7 @@ def parse_args():
     # change frequently
     parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
     parser.add_argument('--AugDirect', type=int, default=20, help='1 for one direction, 2 for bidirection aug edges, 4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
-    parser.add_argument('--method_name', type=str, default='SymDiGCN', help='method name')   # Tested OK: APPNP
+    parser.add_argument('--method_name', type=str, default='DiG', help='method name')   # Tested OK: APPNP
     parser.add_argument('--seed', type=int, default=100,
                         help='random seed for training testing split/random graph generation')
     parser.add_argument('--GPUdevice', type=int, default=1, help='gpu 0,1,2 for selene')
@@ -34,13 +34,10 @@ def parse_args():
     parser.add_argument('--data_path', type=str, default='../dataset/data/tmp/',
                         help='data set folder, for default format see dataset/cora/cora.edges and cora.node_labels')
 
-
-
     parser.add_argument('--epochs', type=int, default=1500, help='training epochs')
     parser.add_argument('--num_filter', type=int, default=2, help='num of filters')
     parser.add_argument('--p_q', type=float, default=0.95, help='direction strength, from 0.5 to 1.')
     parser.add_argument('--p_inter', type=float, default=0.1, help='inter_cluster edge probabilities.')
-
 
     parser.add_argument('--dropout', type=float, default=0.0, help='dropout prob')
     parser.add_argument('--debug', '-D', action='store_true', help='debug mode')

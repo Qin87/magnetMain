@@ -41,12 +41,15 @@ from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 
 def main(args):
     # ********************* write to excel
+    date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
+    print(date_time)
     if args.IsDirectedData:
         excel_file_path = str(args.withAug) + 'Aug_' + args.method_name + '_' + args.dataset.split('/')[
-            1] + '_output.xlsx'
+            0]+args.dataset.split('/')[
+            1] + date_time +'_dir.xlsx'
     else:
         excel_file_path = str(
-            args.withAug) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + '_output.xlsx'
+            args.withAug) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
     print("excel_file_path is ", excel_file_path)
 
     writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')    # a new excel file
@@ -62,8 +65,7 @@ def main(args):
 
     if args.randomseed > 0:
         torch.manual_seed(args.randomseed)
-    date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
-    print(date_time)
+
     log_path = os.path.join(args.log_root, args.log_path, args.save_name, date_time)
     if os.path.isdir(log_path) is False:
         try:
@@ -514,7 +516,6 @@ if __name__ == "__main__":
 
     cuda_device = args.GPUdevice
     if torch.cuda.is_available():
-        # Print information about the CUDA device
         print("CUDA Device Index:", cuda_device)
         device = torch.device("cuda:%d" % cuda_device)
     else:
