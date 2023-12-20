@@ -35,9 +35,6 @@ from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
 from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 
-# select cuda device if available
-
-
 
 def main(args):
     # ********************* write to excel
@@ -88,8 +85,6 @@ def main(args):
     data = dataset[0]
     data = data.to(device)
 
-
-
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
     try:
@@ -108,7 +103,6 @@ def main(args):
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat']
         dataset_num_features = data_x.shape[1]
-    # TODO: add import amazon datasets(photos, computers)
     elif not args.IsDirectedData and args.undirect_dataset in ['Coauthor-CS', 'Amazon-Computers', 'Amazon-Photo']:
         edges = data.edge_index  # for torch_geometric librar
         data_y = data.y
@@ -153,7 +147,6 @@ def main(args):
     print("This is directed graph: ", IsDirectedGraph)
     print("data_x", data_x.shape)  # [11701, 300])
 
-    n_cls = data_y.max().item() + 1
     data = data.to(device)
 
     data_y = data_y.long()
@@ -186,8 +179,49 @@ def main(args):
     del edge_index1, edge_weights1
     data = data.to(device)
     existing_data3 = pd.DataFrame()
+
+    if args.method_name == 'GAT':
+        model = create_gat(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                           nlayer=args.n_layer)  # SHA
+    elif args.method_name == 'GCN':
+        model = create_gcn(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                           nlayer=args.n_layer)  # SHA
+    elif args.method_name == 'SAGE':
+        model = create_sage(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
+                            nlayer=args.n_layer)
+    elif args.method_name == 'GIN':
+        model = GIN_ModelBen(data_x.size(-1), n_cls, filter_num=args.num_filter,
+                             dropout=args.dropout, layer=args.layer).to(device)
+    elif args.method_name == 'Cheb':
+        model = ChebModelBen(data_x.size(-1), n_cls, K=args.K,
+                             filter_num=args.num_filter, dropout=args.dropout,
+                             layer=args.layer).to(device)
+    elif args.method_name == 'APPNP':
+        model = APPNP_ModelBen(data_x.size(-1), n_cls,
+                               filter_num=args.num_filter, alpha=args.alpha,
+                               dropout=args.dropout, layer=args.layer).to(device)
+    elif args.method_name == 'DiG':
+        if not args.method_name[-2:] == 'ib':
+            model = DiModel(data_x.size(-1), n_cls, filter_num=args.num_filter,
+                            dropout=args.dropout, layer=args.layer).to(device)
+        else:
+            model = DiGCN_IB(data_x.size(-1), hidden=args.num_filter,
+                             n_cls=n_cls, dropout=args.dropout,
+                             layer=args.layer).to(device)
+
+    elif args.method_name == 'SymDiGCN':
+        model = SymModel(data_x.size(-1), n_cls, filter_num=args.num_filter,
+                         dropout=args.dropout, layer=args.layer).to(device)
+    else:
+        raise NotImplementedError
+    try:
+        print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
+    except:
+        pass
+    model.to(device)
+
     for split in range(splits):
-        print("split: ", split)
+        print("Beginning for split: ", split)
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
                                                               data_val_maskOrigin.clone(),
@@ -233,46 +267,7 @@ def main(args):
         elif args.gdc == 'none':
             neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
                                                        device)
-        log_str_full = ''
-        if args.method_name == 'GAT':
-            model = create_gat(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
-                               nlayer=args.n_layer)  # SHA
-        elif args.method_name == 'GCN':
-            model = create_gcn(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
-                               nlayer=args.n_layer)  # SHA
-        elif args.method_name == 'SAGE':
-            model = create_sage(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
-                                nlayer=args.n_layer)
-        elif args.method_name == 'GIN':
-            model = GIN_ModelBen(data_x.size(-1), n_cls, filter_num=args.num_filter,
-                              dropout=args.dropout, layer=args.layer).to(device)
-        elif args.method_name == 'Cheb':
-            model = ChebModelBen(data_x.size(-1), n_cls, K=args.K,
-                              filter_num=args.num_filter, dropout=args.dropout,
-                              layer=args.layer).to(device)
-        elif args.method_name == 'APPNP':
-            model = APPNP_ModelBen(data_x.size(-1), n_cls,
-                                filter_num=args.num_filter, alpha=args.alpha,
-                                dropout=args.dropout, layer=args.layer).to(device)
-        elif args.method_name == 'DiG':
-            if not args.method_name[-2:] == 'ib':
-                model = DiModel(data_x.size(-1), n_cls, filter_num=args.num_filter,
-                                dropout=args.dropout, layer=args.layer).to(device)
-            else:
-                model = DiGCN_IB(data_x.size(-1), hidden=args.num_filter,
-                                 n_cls=n_cls, dropout=args.dropout,
-                                 layer=args.layer).to(device)
 
-        elif args.method_name == 'SymDiGCN':
-            model = SymModel(data_x.size(-1), n_cls, filter_num=args.num_filter,
-                             dropout=args.dropout, layer=args.layer).to(device)
-        else:
-            raise NotImplementedError
-        try:
-            print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
-        except:
-            pass
-        model.to(device)
         #     #################################
         #     # Train/Validation/Test
         #     #################################
@@ -397,7 +392,6 @@ def main(args):
                             out= model(new_x)
 
                 prev_out = (out[:data_x.size(0)]).clone().to(device)
-
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
                 new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 criterion(out[new_train_mask], new_y).backward()
@@ -463,7 +457,7 @@ def main(args):
                 break
             end_time = time.time()
             epoch_time = end_time - start_time
-            print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
             Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
             df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             df2 = pd.concat([df2, existing_data2])
@@ -493,7 +487,6 @@ def main(args):
         df3 = pd.concat([df3, existing_data3])
         existing_data3 = df3
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
-        # print(os.getcwd())
         try:
             workbook = openpyxl.load_workbook(excel_file_path)
         except:
