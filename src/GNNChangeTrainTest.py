@@ -278,9 +278,7 @@ def main(args):
         best_val_acc_f1 = 0
         saliency, prev_out = None, None
 
-        # writerBen._save()
         existing_data2 = pd.DataFrame()
-        # df_Epoch = pd.DataFrame(columns=['Empty', 'Data'])
         CountNotImproved = 0
         for epoch in range(args.epochs):
             if CountNotImproved > 100:
@@ -459,7 +457,7 @@ def main(args):
             end_time = time.time()
             epoch_time = end_time - start_time
             # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-            Epoch_output_str = 'Epoch:{}, time:{:2f}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, time:{:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch,val_loss,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
             df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             df2 = pd.concat([df2, existing_data2])
             existing_data2 = df2
@@ -480,7 +478,7 @@ def main(args):
             df2.to_excel(writerBen, sheet_name="Epoch"+str(split), index=False)
             writerBen._save()
 
-        print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+        print('split: {:3d}, val_Acc: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
         Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
                                                                                               test_bacc * 100,
                                                                                               test_f1 * 100)
