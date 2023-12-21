@@ -220,8 +220,9 @@ def main(args):
         pass
     model.to(device)
 
+
     for split in range(splits):
-        print("Beginning for split: ", split)
+        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
                                                               data_val_maskOrigin.clone(),
@@ -471,12 +472,12 @@ def main(args):
                 os.chdir(parent_directory)
                 workbook = openpyxl.load_workbook(excel_file_path)
 
-            if 'Epoch' in workbook.sheetnames:
-                workbook.remove(workbook['Epoch'])
+            if 'Epoch'+str(split) in workbook.sheetnames:
+                workbook.remove(workbook['Epoch'+str(split)])
                 workbook.save(excel_file_path)
             workbook.close()
             writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
-            df2.to_excel(writerBen, sheet_name="Epoch", index=False)
+            df2.to_excel(writerBen, sheet_name="Epoch"+str(split), index=False)
             writerBen._save()
 
         print('split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
