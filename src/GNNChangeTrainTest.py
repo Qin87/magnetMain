@@ -400,7 +400,25 @@ def main(args):
                     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
                                                                                          data_y.size(-1),
                                                                                          data.edge_weight)
-                    out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                    try:
+                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                    except:
+                        model.to('cpu')
+                        data_x.to('cpu')
+                        edges.to('cpu')
+                        edge_in.to('cpu')
+                        edge_out.to('cpu')
+                        in_weight.to('cpu')
+                        out_weight.to('cpu')
+                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                        model.to(device)
+                        data_x.to(device)
+                        edges.to(device)
+                        edge_in.to(device)
+                        edge_out.to(device)
+                        in_weight.to(device)
+                        out_weight.to(device)
+
                 elif args.method_name == 'DiG':
                     out = model(data_x, SparseEdges, edge_weight)
                 else:
@@ -479,9 +497,10 @@ def main(args):
             writerBen._save()
 
         print('split: {:3d}, val_Acc: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-        Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
-                                                                                              test_bacc * 100,
-                                                                                              test_f1 * 100)
+        Split_output_str = 'split: {:3d}, val_Acc: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+        # Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
+        #                                                                                       test_bacc * 100,
+        #                                                                                       test_f1 * 100)
         df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
         df3 = pd.concat([df3, existing_data3])
         existing_data3 = df3
