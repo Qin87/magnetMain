@@ -474,8 +474,8 @@ def main(args):
                 break
             end_time = time.time()
             epoch_time = end_time - start_time
-            # print('Epoch:{}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(epoch,test_accSHA * 100, test_bacc * 100,test_f1 * 100))
             Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, time:{:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch,val_loss,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            # print(Epoch_output_str)
             df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             df2 = pd.concat([df2, existing_data2])
             existing_data2 = df2
@@ -495,9 +495,10 @@ def main(args):
             writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
             df2.to_excel(writerBen, sheet_name="Epoch"+str(split), index=False)
             writerBen._save()
-
-        print('split: {:3d}, val_Acc: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-        Split_output_str = 'split: {:3d}, val_Acc: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            # print("Inside", val_loss)
+        # print("split:", val_loss)
+        print('split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+        Split_output_str = 'split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
         # Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
         #                                                                                       test_bacc * 100,
         #                                                                                       test_f1 * 100)
