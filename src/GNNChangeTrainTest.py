@@ -86,7 +86,7 @@ def main(args):
     data = data.to(device)
 
     global class_num_list, idx_info, prev_out, sample_times
-    global data_train_mask, data_val_mask, data_test_mask  # data split: train, validation, test
+    global data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin  # data split: train, validation, test
     try:
         data.edge_weight = torch.FloatTensor(data.edge_weight)
     except:
@@ -120,13 +120,13 @@ def main(args):
                                                                     all_label=data.y.cpu().detach().numpy(),
                                                                     nclass=n_cls)
 
-        data_train_mask = torch.zeros(data.x.shape[0]).bool().to(device)
-        data_val_mask = torch.zeros(data.x.shape[0]).bool().to(device)
-        data_test_mask = torch.zeros(data.x.shape[0]).bool().to(device)
-        data_train_mask[train_idx] = True
-        data_val_mask[valid_idx] = True
-        data_test_mask[test_idx] = True
-        train_idx = data_train_mask.nonzero().squeeze()
+        data_train_maskOrigin = torch.zeros(data.x.shape[0]).bool().to(device)
+        data_val_maskOrigin = torch.zeros(data.x.shape[0]).bool().to(device)
+        data_test_maskOrigin = torch.zeros(data.x.shape[0]).bool().to(device)
+        data_train_maskOrigin[train_idx] = True
+        data_val_maskOrigin[valid_idx] = True
+        data_test_maskOrigin[test_idx] = True
+        train_idx = data_train_maskOrigin.nonzero().squeeze()
         train_edge_mask = torch.ones(data.edge_index.shape[1], dtype=torch.bool)
 
         class_num_list = [len(item) for item in train_node]
@@ -163,20 +163,23 @@ def main(args):
     except IndexError:
         splits = 1
 
-    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
-    edge_index1 = edge_index1.to(device)
-    edge_weights1 = edge_weights1.to(device)
-    if args.method_name[-2:] == 'ib':
-        edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
-        edge_index2 = edge_index2.to(device)
-        edge_weights2 = edge_weights2.to(device)
-        SparseEdges = (edge_index1, edge_index2)
-        edge_weight = (edge_weights1, edge_weights2)
-        del edge_index2, edge_weights2
-    else:
-        SparseEdges = edge_index1
-        edge_weight = edge_weights1
-    del edge_index1, edge_weights1
+    if args.method_name == 'APPNP':
+        edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
+        edge_index1 = edge_index1.to(device)
+        edge_weights1 = edge_weights1.to(device)
+        if args.method_name[-2:] == 'ib':
+            edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
+            edge_index2 = edge_index2.to(device)
+            edge_weights2 = edge_weights2.to(device)
+            SparseEdges = (edge_index1, edge_index2)
+            edge_weight = (edge_weights1, edge_weights2)
+            del edge_index2, edge_weights2
+        else:
+            SparseEdges = edge_index1
+            edge_weight = edge_weights1
+        del edge_index1, edge_weights1
+
+
     data = data.to(device)
     existing_data3 = pd.DataFrame()
 
