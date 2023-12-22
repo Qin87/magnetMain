@@ -1,0 +1,46 @@
+Namespace(withAug=False, AugDirect=20, method_name='GCN', seed=100, GPUdevice=0, IsDirectedData=True, dataset='WebKB/wisconsin', undirect_dataset='Cora', MakeImbalance=True, CustomizeMask=False, K=2, heads=8, log_root='../logs/', log_path='test', data_path='../dataset/data/tmp/', epochs=1500, num_filter=2, p_q=0.95, p_inter=0.1, dropout=0.0, debug=False, new_setting=False, layer=2, lr=0.005, l2=0.0005, to_undirected=False, alpha=0.1, randomseed=-1, imb_ratio=100, n_layer=2, feat_dim=64, warmup=5, epoch=900, tau=2, max=False, no_mask=False, gdc='ppr')
+CUDA Device Index: 0
+12-21-14:23:31
+excel_file_path is  FalseAug_GCN_WebKBwisconsin12-21-14:23:31_dir.xlsx
+dataset is  WebKB wisconsin
+Dataset is  wisconsin() 
+Chosen from DirectedData:  True
+Num of bidrected edges: 49, total num of edges: 515
+This is directed graph:  True
+data_x torch.Size([251, 1703])
+splits 10
+StandGCN2(
+  (conv1): GCNConv(1703, 64)
+  (conv2): GCNConv(64, 5)
+)
+Beginning for split:  0 21-14:23:43
+Early stop at epoch:  503
+split:   0, val_Acc:  13.67, test_Acc:  39.22, test_bacc:  21.30, test_f1:  18.18
+Beginning for split:  1 21-14:24:54
+Early stop at epoch:  506
+split:   1, val_Acc:  23.85, test_Acc:  68.63, test_bacc:  32.29, test_f1:  29.42
+Beginning for split:  2 21-14:27:16
+Early stop at epoch:  507
+split:   2, val_Acc:  30.08, test_Acc:  54.90, test_bacc:  36.49, test_f1:  37.75
+Beginning for split:  3 21-14:31:30
+Early stop at epoch:  512
+split:   3, val_Acc:  18.29, test_Acc:  54.90, test_bacc:  30.97, test_f1:  29.78
+Beginning for split:  4 21-14:38:43
+Early stop at epoch:  507
+split:   4, val_Acc:  20.62, test_Acc:  49.02, test_bacc:  36.09, test_f1:  35.50
+Beginning for split:  5 21-14:48:28
+Early stop at epoch:  507
+split:   5, val_Acc:  11.38, test_Acc:  62.75, test_bacc:  33.06, test_f1:  35.82
+Beginning for split:  6 21-15:00:18
+Early stop at epoch:  506
+split:   6, val_Acc:  13.57, test_Acc:  58.82, test_bacc:  39.69, test_f1:  42.53
+Beginning for split:  7 21-15:13:32
+Early stop at epoch:  506
+split:   7, val_Acc:   8.67, test_Acc:  60.78, test_bacc:  27.80, test_f1:  26.53
+Beginning for split:  8 21-15:27:18
+Early stop at epoch:  505
+split:   8, val_Acc:  19.63, test_Acc:  52.94, test_bacc:  31.56, test_f1:  33.32
+Beginning for split:  9 21-15:40:48
+Early stop at epoch:  510
+split:   9, val_Acc:  24.17, test_Acc:  62.75, test_bacc:  39.58, test_f1:  38.07
+Total time(all splits):  5519.717852115631
