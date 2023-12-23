@@ -179,7 +179,6 @@ def main(args):
             edge_weight = edge_weights1
         del edge_index1, edge_weights1
 
-
     data = data.to(device)
     existing_data3 = pd.DataFrame()
 
