@@ -1,0 +1,45 @@
+Namespace(withAug=False, AugDirect=20, method_name='SymDiGCN', seed=100, GPUdevice=0, IsDirectedData=True, dataset='WikipediaNetwork/squirrel', undirect_dataset='Cora', MakeImbalance=True, CustomizeMask=False, K=2, heads=8, log_root='../logs/', log_path='test', data_path='../dataset/data/tmp/', epochs=1500, num_filter=2, p_q=0.95, p_inter=0.1, dropout=0.0, debug=False, new_setting=False, layer=2, lr=0.005, l2=0.0005, to_undirected=False, alpha=0.1, randomseed=-1, imb_ratio=100, n_layer=2, feat_dim=64, warmup=5, epoch=900, tau=2, max=False, no_mask=False, gdc='ppr')
+CUDA Device Index: 0
+12-22-19:38:02
+excel_file_path is  FalseAug_SymDiGCN_WikipediaNetworksquirrel12-22-19:38:02_dir.xlsx
+dataset is  WikipediaNetwork squirrel
+Dataset is  WikipediaNetwork() 
+Chosen from DirectedData:  True
+Num of bidrected edges: 18580, total num of edges: 217073
+This is directed graph:  True
+data_x torch.Size([5201, 2089])
+splits 10
+Beginning for split:  0 22-19:41:29
+Traceback (most recent call last):
+  File "/home/qj2004/Ben/magnet/src/GNNChangeTrainTest.py", line 404, in main
+    out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/qj2004/Ben/magnet/src/layer/DGCN.py", line 177, in forward
+    x3 = self.gconv(x, edge_out, out_w)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/qj2004/Ben/magnet/src/layer/DGCN.py", line 104, in forward
+    edge_index, edge_weight = gcn_norm(  # yapf: disable
+  File "/home/qj2004/Ben/magnet/src/layer/DGCN.py", line 59, in gcn_norm
+    edge_index, tmp_edge_weight = add_remaining_self_loops(
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch_geometric/utils/loop.py", line 370, in add_remaining_self_loops
+    edge_index = torch.cat([edge_index[:, mask], loop_index], dim=1)
+RuntimeError: CUDA out of memory. Tried to allocate 130.00 MiB (GPU 0; 23.69 GiB total capacity; 1.03 GiB already allocated; 117.94 MiB free; 1.21 GiB reserved in total by PyTorch) If reserved memory is >> allocated memory try setting max_split_size_mb to avoid fragmentation.  See documentation for Memory Management and PYTORCH_CUDA_ALLOC_CONF
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/home/qj2004/Ben/magnet/src/GNNChangeTrainTest.py", line 615, in <module>
+    main(args)
+  File "/home/qj2004/Ben/magnet/src/GNNChangeTrainTest.py", line 413, in main
+    out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/qj2004/Ben/magnet/src/layer/DGCN.py", line 162, in forward
+    x = self.lin1(x)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1130, in _call_impl
+    return forward_call(*input, **kwargs)
+  File "/home/qj2004/.conda/envs/myenv/lib/python3.10/site-packages/torch/nn/modules/linear.py", line 114, in forward
+    return F.linear(input, self.weight, self.bias)
+RuntimeError: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! (when checking argument for argument mat2 in method wrapper_mm)
