@@ -163,7 +163,7 @@ def main(args):
     except IndexError:
         splits = 1
 
-    if args.method_name == 'APPNP':
+    if args.method_name == 'APPNP' or 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
         edge_index1 = edge_index1.to(device)
         edge_weights1 = edge_weights1.to(device)
