@@ -523,6 +523,23 @@ def main(args):
         df3.to_excel(writerBen, sheet_name="Split", index=False)
         writerBen._save()
 
+    end_time = datetime.now().strftime('%m-%d-%H:%M:%S')
+    time_str = 'startTime:'+ date_time + '/tend_time: ' + end_time
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    df4= pd.DataFrame({'Usedtime': [time_str]})
+    try:
+        workbook = openpyxl.load_workbook(excel_file_path)
+    except:
+        current_directory = os.getcwd()
+        parent_directory = os.path.dirname(current_directory)
+        os.chdir(parent_directory)
+        workbook = openpyxl.load_workbook(excel_file_path)
+    workbook.close()
+    writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
+    df4.to_excel(writerBen, sheet_name="Split", index=False)
+    writerBen._save()
+
+
 if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
