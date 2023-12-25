@@ -386,11 +386,22 @@ def main(args):
                 else:
                     try:
                         out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                    except RuntimeError:
+                        model.to('cpu')
+                        new_x = new_x.to('cpu')
+                        new_SparseEdges = new_SparseEdges.to('cpu')
+                        new_edge_weight = new_edge_weight.to('cpu')
+                        out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                        model.to(device)
+                        new_x = new_x.to(device)
+                        new_SparseEdges = new_SparseEdges.to(device)
+                        new_edge_weight = new_edge_weight.to(device)
                     except TypeError:
                         try:
                             out = model(new_x, new_edge_index)
                         except TypeError:
                             out= model(new_x)
+
 
                 prev_out = (out[:data_x.size(0)]).clone().to(device)
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
