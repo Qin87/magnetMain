@@ -547,7 +547,7 @@ def main(args):
         workbook = openpyxl.load_workbook(excel_file_path)
     workbook.close()
     writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
-    df4.to_excel(writerBen, sheet_name="Split", index=False)
+    df4.to_excel(writerBen, sheet_name="Usedtime", index=False)
     writerBen._save()
 
 
