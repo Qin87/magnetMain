@@ -13,6 +13,7 @@ def parse_args():
                         help='random seed for training testing split/random graph generation')
     parser.add_argument('--GPUdevice', type=int, default=2, help='gpu 0,1,2 for selene')
 
+
     # change less frequentl
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
     parser.add_argument('--dataset', type=str, default='WikipediaNetwork/squirrel', help='data set selection')
