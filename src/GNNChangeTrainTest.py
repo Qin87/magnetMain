@@ -224,8 +224,8 @@ def main(args):
 
 
     for split in range(splits):
-        if split <1:
-            continue
+        # if split <1:
+        #     continue
         print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
@@ -538,7 +538,7 @@ def main(args):
         writerBen._save()
 
     end_time = datetime.now().strftime('%m-%d-%H:%M:%S')
-    time_str = 'startTime:'+ date_time + '/tend_time: ' + end_time
+    time_str = 'startTime:'+ date_time + '\tend_time: ' + end_time
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
     df4= pd.DataFrame({'Usedtime': [time_str]})
     try:
