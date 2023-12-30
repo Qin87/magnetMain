@@ -224,8 +224,8 @@ def main(args):
 
 
     for split in range(splits):
-        if split <1 or split >5:
-            continue
+        # if split <1 or split >5:
+        #     continue
         print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
