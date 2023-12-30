@@ -1,0 +1,6 @@
+*.log
+*.xlsx
+
+# Ignore directories that begin with "log"
+log*/
+/.gitignore
