@@ -11,7 +11,6 @@ def parse_args():
     parser.add_argument('--method_name', type=str, default='SymDiGCN', help='method name')   # Tested OK: APPNP, SymDiGCN
     parser.add_argument('--GPUdevice', type=int, default=2, help='gpu 0,1,2 for selene')
 
-
     # change less frequentl
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
     parser.add_argument('--dataset', type=str, default='WikipediaNetwork/squirrel', help='data set selection')
