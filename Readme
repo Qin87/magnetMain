@@ -26,16 +26,11 @@ CiteSeer
 Cora
 PUbMed: too large so only can run in GPU3090
 
-To test:
-
-
-
 
 tested GNNs:
 GIN,
 SAGE, GCN, GAT,
 APPNP,
 Cheb
-SymDiGCN
 DiG
 
