@@ -12,11 +12,11 @@ def parse_args():
     parser.add_argument('--GPUdevice', type=int, default=1, help='gpu 0,1,2 for selene')
 
     # change less frequentl
-    parser.add_argument('--IsDirectedData', type=bool, default=False, help='the dataset is directed graph')
-    parser.add_argument('--dataset', type=str, default='WikipediaNetwork/squirrel', help='data set selection')
+    parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
+    parser.add_argument('--dataset', type=str, default='WikiCS/', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
-                        default='PubMed', help='data set selection as GraphSHA')
+                        default='Amazon-Computers', help='data set selection as GraphSHA')
 
     parser.add_argument('--MakeImbalance', type=bool, default=True, help='True for turn dataset into imbalanced')
     parser.add_argument('--CustomizeMask', type=bool, default=False,
