@@ -41,9 +41,9 @@ def main(args):
     date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     print(date_time)
     if args.IsDirectedData:
-        excel_file_path = str(args.withAug) + 'Aug_' + args.method_name + '_' + args.dataset.split('/')[
+        excel_file_path = str(args.withAug) + 'Aug_' + date_time + '_'+ args.method_name + '_' + args.dataset.split('/')[
             0]+args.dataset.split('/')[
-            1] + date_time +'_dir.xlsx'
+            1]  +'_dir.xlsx'
     else:
         excel_file_path = str(
             args.withAug) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
@@ -488,10 +488,16 @@ def main(args):
             if CountNotImproved > 500:
                 print("Early stop at epoch: ", epoch)
                 break
+
             end_time = time.time()
             epoch_time = end_time - start_time
-            Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, time:{:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch,val_loss,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
-            # print(Epoch_output_str)
+            if epoch%2:
+                Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, time:{:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch,val_loss,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            else:
+                end_time_datetime = datetime.fromtimestamp(end_time)
+                Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, present time:{:s}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(
+                    epoch, val_loss, end_time_datetime.strftime("%H:%M:%S"), test_accSHA * 100, test_bacc * 100,
+                    test_f1 * 100)
             df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             df2 = pd.concat([df2, existing_data2])
             existing_data2 = df2
@@ -511,13 +517,8 @@ def main(args):
             writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
             df2.to_excel(writerBen, sheet_name="Epoch"+str(split), index=False)
             writerBen._save()
-            # print("Inside", val_loss)
-        # print("split:", val_loss)
         print('split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
         Split_output_str = 'split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
-        # Split_output_str = 'split: {}, test_Acc: {:.2f}, test_bacc: {:.2f}, test_f1: {:.2f}'.format(split, test_accSHA * 100,
-        #                                                                                       test_bacc * 100,
-        #                                                                                       test_f1 * 100)
         df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
         df3 = pd.concat([df3, existing_data3])
         existing_data3 = df3
