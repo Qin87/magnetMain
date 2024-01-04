@@ -285,7 +285,7 @@ def main(args):
         existing_data2 = pd.DataFrame()
         CountNotImproved = 0
         for epoch in range(args.epochs):
-            if CountNotImproved > 100:
+            if CountNotImproved > 50:
                 opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
             else:
                 opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
