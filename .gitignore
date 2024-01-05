@@ -3,4 +3,8 @@
 
 # Ignore directories that begin with "log"
 log*/
-/.gitignore
+#/.gitignore
+
+dataset/*
+src/dataset/*
+
