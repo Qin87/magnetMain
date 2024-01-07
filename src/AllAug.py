@@ -206,105 +206,105 @@ def main(args):
         pass
     model.to(device)
 
-    for split in range(splits):
-        # if split >4:
-        #     continue
-        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
-        if splits == 1:
-            data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
-                                                              data_val_maskOrigin.clone(),
-                                                              data_test_maskOrigin.clone())
+    list_com = [(False, 1), (True, 1), (True, 2), (True, 4), (True, 21), (True, 20)]
+    for i in range(len(list_com)):
+        (args.withAug, args.AugDirect) = list_com[i]
+
+        if args.IsDirectedData:
+            excel_file_path = str(args.withAug) + str(
+                args.AugDirect) + 'Aug_' + date_time + '_' + args.method_name + '_' + args.dataset.split('/')[
+                                  0] + args.dataset.split('/')[
+                                  1] + '_dir.xlsx'
         else:
-            try:
-                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
-                                                              data_val_maskOrigin[:, split].clone(),
-                                                              data_test_maskOrigin[:, split].clone())
-            except IndexError:
-                print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
-                data_train_mask, data_val_mask = (data_train_maskOrigin[:, split].clone(),data_val_maskOrigin[:, split].clone())
-                data_test_mask = data_test_maskOrigin[:, 1].clone()
+            excel_file_path = str(args.withAug) + str(
+                args.AugDirect) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
+        print("excel_file_path is ", excel_file_path)
 
-        if args.CustomizeMask:
-            data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
-        stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
-        n_data = []  # num of train in each class
-        for i in range(n_cls):
-            data_num = (stats == i).sum()
-            n_data.append(int(data_num.item()))
-        idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
-        if args.MakeImbalance:
-            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+        writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')  # a new excel file
+        args_dict = vars(args)
+        df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
+        combined_data = df
+        if not combined_data.empty:
+            combined_data.to_excel(writerBen, sheet_name="Args", index=False)
         else:
-            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
+            print("DataFrame is empty. Not writing to the Excel file.")
+        writerBen._save()
 
-        train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
-        labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
-        train_idx_list = train_idx.cpu().tolist()
-        local2global = {i: train_idx_list[i] for i in range(len(train_idx_list))}
-        global2local = dict([val, key] for key, val in local2global.items())
-        idx_info_list = [item.cpu().tolist() for item in idx_info]  # list of all train nodes for each class
-        idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
-                          idx_info_list]  # train nodes position inside train
-
-        if args.gdc == 'ppr':
-            neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
-        elif args.gdc == 'hk':
-            neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
-        elif args.gdc == 'none':
-            neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
-                                                       device)
-
-        #     #################################
-        #     # Train/Validation/Test
-        #     #################################
-        test_accSHA = test_bacc = test_f1 = 0.0
-
-        # from GraphSHA
-        best_val_acc_f1 = 0
-        saliency, prev_out = None, None
-
-        existing_data2 = pd.DataFrame()
-        CountNotImproved = 0
-        for epoch in range(args.epochs):
-            if CountNotImproved > 50:
-                opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
+        for split in range(splits):
+            # if split >4:
+            #     continue
+            print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
+            if splits == 1:
+                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
+                                                                  data_val_maskOrigin.clone(),
+                                                                  data_test_maskOrigin.clone())
             else:
-                opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
-            # opt = torch.optim.Adam(
-            #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
-            #     lr=args.lr)  # from SHA
-            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
-                                                                   verbose=False)
-            start_time = time.time()
-            model.train()
-            model.to(device)
-            opt.zero_grad()  # clear the gradients of the model's parameters.
+                try:
+                    data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
+                                                                  data_val_maskOrigin[:, split].clone(),
+                                                                  data_test_maskOrigin[:, split].clone())
+                except IndexError:
+                    print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
+                    data_train_mask, data_val_mask = (data_train_maskOrigin[:, split].clone(),data_val_maskOrigin[:, split].clone())
+                    data_test_mask = data_test_maskOrigin[:, 1].clone()
 
-            list_com= [(False, 1), (True, 1), (True, 2), (True, 4), (True, 21), (True, 20)]
-            for i in range(len(list_com)):
-                (args.withAug, args.AugDirect) = list_com[i]
+            if args.CustomizeMask:
+                data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
+            stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
+            n_data = []  # num of train in each class
+            for i in range(n_cls):
+                data_num = (stats == i).sum()
+                n_data.append(int(data_num.item()))
+            idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
+            if args.MakeImbalance:
+                class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                    make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+            else:
+                class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                    keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
 
-                if args.IsDirectedData:
-                    excel_file_path = str(args.withAug) + str(
-                        args.AugDirect) + 'Aug_' + date_time + '_' + args.method_name + '_' + args.dataset.split('/')[
-                                          0] + args.dataset.split('/')[
-                                          1] + '_dir.xlsx'
+            train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
+            labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
+            train_idx_list = train_idx.cpu().tolist()
+            local2global = {i: train_idx_list[i] for i in range(len(train_idx_list))}
+            global2local = dict([val, key] for key, val in local2global.items())
+            idx_info_list = [item.cpu().tolist() for item in idx_info]  # list of all train nodes for each class
+            idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
+                              idx_info_list]  # train nodes position inside train
+
+            if args.gdc == 'ppr':
+                neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
+            elif args.gdc == 'hk':
+                neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
+            elif args.gdc == 'none':
+                neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
+                                                           device)
+
+            #     #################################
+            #     # Train/Validation/Test
+            #     #################################
+            test_accSHA = test_bacc = test_f1 = 0.0
+
+            # from GraphSHA
+            best_val_acc_f1 = 0
+            saliency, prev_out = None, None
+
+            existing_data2 = pd.DataFrame()
+            CountNotImproved = 0
+            for epoch in range(args.epochs):
+                if CountNotImproved > 50:
+                    opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
                 else:
-                    excel_file_path = str(args.withAug) + str(
-                        args.AugDirect) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
-                print("excel_file_path is ", excel_file_path)
-
-                writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')  # a new excel file
-                args_dict = vars(args)
-                df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
-                combined_data = df
-                if not combined_data.empty:
-                    combined_data.to_excel(writerBen, sheet_name="Args", index=False)
-                else:
-                    print("DataFrame is empty. Not writing to the Excel file.")
-                writerBen._save()
+                    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
+                # opt = torch.optim.Adam(
+                #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
+                #     lr=args.lr)  # from SHA
+                scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
+                                                                       verbose=False)
+                start_time = time.time()
+                model.train()
+                model.to(device)
+                opt.zero_grad()  # clear the gradients of the model's parameters.
 
                 if args.withAug:
                     if epoch > args.warmup:
@@ -524,12 +524,31 @@ def main(args):
                 writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
                 df2.to_excel(writerBen, sheet_name="Epoch"+str(split), index=False)
                 writerBen._save()
-        print('split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-        Split_output_str = 'split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
-        df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
-        df3 = pd.concat([df3, existing_data3])
-        existing_data3 = df3
+            print('split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            Split_output_str = 'split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
+            df3 = pd.concat([df3, existing_data3])
+            existing_data3 = df3
+            os.chdir(os.path.dirname(os.path.abspath(__file__)))
+            try:
+                workbook = openpyxl.load_workbook(excel_file_path)
+            except:
+                current_directory = os.getcwd()
+                parent_directory = os.path.dirname(current_directory)
+                os.chdir(parent_directory)
+                workbook = openpyxl.load_workbook(excel_file_path)
+            if 'Split' in workbook.sheetnames:
+                workbook.remove(workbook['Split'])
+                workbook.save(excel_file_path)
+            workbook.close()
+            writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
+            df3.to_excel(writerBen, sheet_name="Split", index=False)
+            writerBen._save()
+
+        end_time = datetime.now().strftime('%m-%d-%H:%M:%S')
+        time_str = 'startTime:'+ date_time + '\tend_time: ' + end_time
         os.chdir(os.path.dirname(os.path.abspath(__file__)))
+        df4= pd.DataFrame({'Usedtime': [time_str]})
         try:
             workbook = openpyxl.load_workbook(excel_file_path)
         except:
@@ -537,29 +556,10 @@ def main(args):
             parent_directory = os.path.dirname(current_directory)
             os.chdir(parent_directory)
             workbook = openpyxl.load_workbook(excel_file_path)
-        if 'Split' in workbook.sheetnames:
-            workbook.remove(workbook['Split'])
-            workbook.save(excel_file_path)
         workbook.close()
         writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
-        df3.to_excel(writerBen, sheet_name="Split", index=False)
+        df4.to_excel(writerBen, sheet_name="Usedtime", index=False)
         writerBen._save()
-
-    end_time = datetime.now().strftime('%m-%d-%H:%M:%S')
-    time_str = 'startTime:'+ date_time + '\tend_time: ' + end_time
-    os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    df4= pd.DataFrame({'Usedtime': [time_str]})
-    try:
-        workbook = openpyxl.load_workbook(excel_file_path)
-    except:
-        current_directory = os.getcwd()
-        parent_directory = os.path.dirname(current_directory)
-        os.chdir(parent_directory)
-        workbook = openpyxl.load_workbook(excel_file_path)
-    workbook.close()
-    writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
-    df4.to_excel(writerBen, sheet_name="Usedtime", index=False)
-    writerBen._save()
 
 
 if __name__ == "__main__":
