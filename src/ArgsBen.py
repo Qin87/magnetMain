@@ -7,8 +7,9 @@ def parse_args():
 
     # change frequently
     parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
-    parser.add_argument('--AugDirect', type=int, default=1, help='1 for one direction, 2 for bidirection aug edges, 4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
-    parser.add_argument('--method_name', type=str, default='GCN', help='method name')   # Tested OK: APPNP, SymDiGCN
+    parser.add_argument('--AugDirect', type=int, default=1, help='1 for one direction, 2 for bidirection aug edges, '
+                                                                 '4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
+    parser.add_argument('--method_name', type=str, default='GIN', help='method name')   # Tested OK: APPNP, SymDiGCN
     parser.add_argument('--GPUdevice', type=int, default=1, help='gpu 0,1,2 for selene')
 
     # change less frequentl

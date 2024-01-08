@@ -218,7 +218,7 @@ def main(args):
         else:
             excel_file_path = str(args.withAug) + str(
                 args.AugDirect) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
-        print("excel_file_path is ", excel_file_path)
+        print("\nexcel_file_path is ", excel_file_path)
 
         writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')  # a new excel file
         args_dict = vars(args)
@@ -231,8 +231,6 @@ def main(args):
         writerBen._save()
 
         for split in range(splits):
-            # if split >4:
-            #     continue
             print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
             if splits == 1:
                 data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
@@ -452,7 +450,6 @@ def main(args):
                     model.eval()
                     if args.method_name == 'SymDiGCN':
                         out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
-                        # print(model)
                     elif args.method_name == 'DiG':
                         out = model(data_x, SparseEdges, edge_weight)
                     else:
@@ -524,8 +521,8 @@ def main(args):
                 writerBen = pd.ExcelWriter(excel_file_path, mode="a", engine="openpyxl")
                 df2.to_excel(writerBen, sheet_name="Epoch"+str(split), index=False)
                 writerBen._save()
-            print('split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
-            Split_output_str = 'split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            print('{}Aug: {:d}, split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(args.withAug, args.AugDirect, split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
+            Split_output_str = '{}Aug: {:d}, split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(args.withAug, args.AugDirect, split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
             df3 = pd.DataFrame({'Split_Output': [Split_output_str]})
             df3 = pd.concat([df3, existing_data3])
             existing_data3 = df3
