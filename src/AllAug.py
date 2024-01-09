@@ -206,7 +206,7 @@ def main(args):
         pass
     model.to(device)
 
-    list_com = [(True, 1), (True, 2), (True, 4), (True, 21), (False, 1), (True, 20)]
+    list_com = [(True, 1), (True, 2), (True, 4), (True, 21), (False, 0), (True, 20)]
     for i in range(len(list_com)):
         (args.withAug, args.AugDirect) = list_com[i]
 
