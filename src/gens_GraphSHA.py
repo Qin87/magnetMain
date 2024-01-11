@@ -334,6 +334,158 @@ def neighbor_sampling_bidegree(total_node, edge_index, sampling_src_idx,
 
     return new_edge_index
 
+def neighbor_sampling_bidegree_variant1(total_node, edge_index, sampling_src_idx,
+                               neighbor_dist_list, train_node_mask=None):
+    """
+    two degrees in row and col.
+    Neighbor Sampling - Mix adjacent node distribution and samples neighbors from it
+    Input:
+        total_node:         # of nodes; scalar
+        edge_index:         Edge index; [2, # of edges]
+        sampling_src_idx:   Source node index for augmented nodes; [# of augmented nodes]
+        sampling_dst_idx:   Target node index for augmented nodes; [# of augmented nodes]
+        the sources nodes has no direction
+        neighbor_dist_list: Adjacent node distribution of whole nodes; [# of nodes, # of nodes]
+        may well no direction
+        prev_out:           Model prediction of the previous step; [# of nodes, n_cls]
+        train_node_mask:    Mask for not removed nodes; [# of nodes]
+    Output:
+        new_edge_index:     original edge index + sampled edge index
+        dist_kl:            kl divergence of target nodes from source nodes; [# of sampling nodes, 1]
+    """
+    ## Exception Handling ##
+    device = edge_index.device
+    sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
+
+    # Find the nearest nodes and mix target pool
+    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+    # print(neighbor_dist_list)
+
+    # Compute col_degree
+    col = edge_index[1]
+    row = edge_index[0]
+    col_degree = scatter_add(torch.ones_like(col), col)  # Ben only col col_degree
+    row_degree = scatter_add(torch.ones_like(row), row)  # Ben only col col_degree
+
+    if len(col_degree) < total_node:
+        col_degree = torch.cat([col_degree, col_degree.new_zeros(total_node - len(col_degree))], dim=0)
+    if len(row_degree) < total_node:
+        row_degree = torch.cat([row_degree, row_degree.new_zeros(total_node - len(row_degree))], dim=0)
+    if train_node_mask is None:
+        train_node_mask = torch.ones_like(col_degree,
+                                          dtype=torch.bool)  # the same shape as the col_degree tensor, and all elements in the mask are set to True.
+    col_degree_dist = scatter_add(torch.ones_like(col_degree[train_node_mask]), col_degree[train_node_mask]).to(
+        device).type(
+        torch.float32)
+    row_degree_dist = scatter_add(torch.ones_like(row_degree[train_node_mask]), row_degree[train_node_mask]).to(
+        device).type(torch.float32)
+
+    # Sample col_degree for augmented nodes
+    col_prob = col_degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1)
+    row_prob = row_degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1)
+    col_aug_degree = torch.multinomial(col_prob, 1).to(device).squeeze(dim=1)  # (m)
+    row_aug_degree = torch.multinomial(row_prob, 1).to(device).squeeze(dim=1)  # (m)
+    col_max_degree = col_degree.max().item() + 1
+    row_max_degree = row_degree.max().item() + 1
+    col_aug_degree = torch.min(col_aug_degree, col_degree[sampling_src_idx])
+    row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
+
+    # Sample neighbors
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
+    col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
+    row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
+    col_new_col = col_new_tgt[(col_tgt_index - col_aug_degree.unsqueeze(dim=1) < 0)]
+    row_new_row = row_new_tgt[(row_tgt_index - row_aug_degree.unsqueeze(dim=1) < 0)]
+    col_new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
+    row_new_col = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
+    col_new_row = col_new_row.repeat_interleave(col_aug_degree)
+    row_new_col = row_new_col.repeat_interleave(row_aug_degree)
+    # col_inv_edge_index = torch.stack([col_new_col, col_new_row], dim=0)
+    row_inv_edge_index = torch.stack([row_new_col, row_new_row], dim=0)
+    col_inv_edge_index = torch.stack([col_new_row, col_new_col], dim=0)  # Ben change direction
+    # row_inv_edge_index = torch.stack([row_new_row, row_new_col], dim=0)
+    new_edge_index = torch.cat([edge_index, col_inv_edge_index, row_inv_edge_index], dim=1)
+
+    return new_edge_index
+
+def neighbor_sampling_bidegree_variant2(total_node, edge_index, sampling_src_idx,
+                               neighbor_dist_list, train_node_mask=None):
+    """
+    two degrees in row and col.
+    Neighbor Sampling - Mix adjacent node distribution and samples neighbors from it
+    Input:
+        total_node:         # of nodes; scalar
+        edge_index:         Edge index; [2, # of edges]
+        sampling_src_idx:   Source node index for augmented nodes; [# of augmented nodes]
+        sampling_dst_idx:   Target node index for augmented nodes; [# of augmented nodes]
+        the sources nodes has no direction
+        neighbor_dist_list: Adjacent node distribution of whole nodes; [# of nodes, # of nodes]
+        may well no direction
+        prev_out:           Model prediction of the previous step; [# of nodes, n_cls]
+        train_node_mask:    Mask for not removed nodes; [# of nodes]
+    Output:
+        new_edge_index:     original edge index + sampled edge index
+        dist_kl:            kl divergence of target nodes from source nodes; [# of sampling nodes, 1]
+    """
+    ## Exception Handling ##
+    device = edge_index.device
+    sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
+
+    # Find the nearest nodes and mix target pool
+    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+    # print(neighbor_dist_list)
+
+    # Compute col_degree
+    col = edge_index[1]
+    row = edge_index[0]
+    col_degree = scatter_add(torch.ones_like(col), col)  # Ben only col col_degree
+    row_degree = scatter_add(torch.ones_like(row), row)  # Ben only col col_degree
+
+    if len(col_degree) < total_node:
+        col_degree = torch.cat([col_degree, col_degree.new_zeros(total_node - len(col_degree))], dim=0)
+    if len(row_degree) < total_node:
+        row_degree = torch.cat([row_degree, row_degree.new_zeros(total_node - len(row_degree))], dim=0)
+    if train_node_mask is None:
+        train_node_mask = torch.ones_like(col_degree,
+                                          dtype=torch.bool)  # the same shape as the col_degree tensor, and all elements in the mask are set to True.
+    col_degree_dist = scatter_add(torch.ones_like(col_degree[train_node_mask]), col_degree[train_node_mask]).to(
+        device).type(
+        torch.float32)
+    row_degree_dist = scatter_add(torch.ones_like(row_degree[train_node_mask]), row_degree[train_node_mask]).to(
+        device).type(torch.float32)
+
+    # Sample col_degree for augmented nodes
+    col_prob = col_degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1)
+    row_prob = row_degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1)
+    col_aug_degree = torch.multinomial(col_prob, 1).to(device).squeeze(dim=1)  # (m)
+    row_aug_degree = torch.multinomial(row_prob, 1).to(device).squeeze(dim=1)  # (m)
+    col_max_degree = col_degree.max().item() + 1
+    row_max_degree = row_degree.max().item() + 1
+    col_aug_degree = torch.min(col_aug_degree, col_degree[sampling_src_idx])
+    row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
+
+    # Sample neighbors
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
+    col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
+    row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
+    col_new_col = col_new_tgt[(col_tgt_index - col_aug_degree.unsqueeze(dim=1) < 0)]
+    row_new_row = row_new_tgt[(row_tgt_index - row_aug_degree.unsqueeze(dim=1) < 0)]
+    col_new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
+    row_new_col = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
+    col_new_row = col_new_row.repeat_interleave(col_aug_degree)
+    row_new_col = row_new_col.repeat_interleave(row_aug_degree)
+    col_inv_edge_index = torch.stack([col_new_col, col_new_row], dim=0)
+    # row_inv_edge_index = torch.stack([row_new_col, row_new_row], dim=0)
+    # col_inv_edge_index = torch.stack([col_new_row, col_new_col], dim=0)  # Ben change direction
+    row_inv_edge_index = torch.stack([row_new_row, row_new_col], dim=0)
+    new_edge_index = torch.cat([edge_index, col_inv_edge_index, row_inv_edge_index], dim=1)
+
+    return new_edge_index
+
 def neighbor_sampling_BiEdge_bidegree(total_node, edge_index, sampling_src_idx,
                                neighbor_dist_list, train_node_mask=None):
     """

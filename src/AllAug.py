@@ -21,7 +21,8 @@ warnings.filterwarnings("ignore")
 
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
-    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin
+    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin, \
+    neighbor_sampling_bidegree_variant1, neighbor_sampling_bidegree_variant2
 # from layer.DiGCN import *
 from ArgsBen import parse_args
 from utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
@@ -206,8 +207,8 @@ def main(args):
         pass
     model.to(device)
 
-    list_com = [(True, 1), (True, 2), (True, 4), (True, 21)]
-    # list_com = [(True, 1), (True, 2), (True, 4), (True, 21), (False, 0), (True, 20)]
+    # list_com = [(True, 1), (True, 2), (True, 4), (True, 21), (True, 22), (True, 23)]
+    list_com = [(True, 1), (True, 2), (True, 4), (True, 21), (True, 22), (True, 23), (False, 0), (True, 20)]
     for i in range(len(list_com)):
         (args.withAug, args.AugDirect) = list_com[i]
 
@@ -327,6 +328,14 @@ def main(args):
                         elif args.AugDirect == 21:
                             new_edge_index = neighbor_sampling_bidegreeOrigin(data_x.size(0), edges[:, train_edge_mask],
                                                                               sampling_src_idx, neighbor_dist_list)
+                        elif args.AugDirect == 22:
+                            new_edge_index = neighbor_sampling_bidegree_variant1(data_x.size(0),
+                                                                                 edges[:, train_edge_mask],
+                                                                                 sampling_src_idx, neighbor_dist_list)
+                        elif args.AugDirect == 23:
+                            new_edge_index = neighbor_sampling_bidegree_variant2(data_x.size(0),
+                                                                                 edges[:, train_edge_mask],
+                                                                                 sampling_src_idx, neighbor_dist_list)
 
                         else:
                             pass

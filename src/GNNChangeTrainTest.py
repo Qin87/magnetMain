@@ -21,7 +21,8 @@ warnings.filterwarnings("ignore")
 
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
-    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin
+    neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin, \
+    neighbor_sampling_bidegree_variant1, neighbor_sampling_bidegree_variant2
 # from layer.DiGCN import *
 from ArgsBen import parse_args
 from utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
@@ -152,6 +153,7 @@ def main(args):
     data_y = data_y.long()
     n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
     n_cls = torch.tensor(n_cls).to(device)
+    print("Number of classes: ", n_cls)
 
     criterion = CrossEntropy().to(device)
 
@@ -319,6 +321,12 @@ def main(args):
                                                                     neighbor_dist_list)  # has two types
                     elif args.AugDirect == 21:
                         new_edge_index = neighbor_sampling_bidegreeOrigin(data_x.size(0), edges[:, train_edge_mask],
+                                                                          sampling_src_idx, neighbor_dist_list)
+                    elif args.AugDirect == 22:
+                        new_edge_index = neighbor_sampling_bidegree_variant1(data_x.size(0), edges[:, train_edge_mask],
+                                                                          sampling_src_idx, neighbor_dist_list)
+                    elif args.AugDirect == 23:
+                        new_edge_index = neighbor_sampling_bidegree_variant2(data_x.size(0), edges[:, train_edge_mask],
                                                                           sampling_src_idx, neighbor_dist_list)
 
                     else:
