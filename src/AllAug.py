@@ -336,7 +336,6 @@ def main(args):
                             new_edge_index = neighbor_sampling_bidegree_variant2(data_x.size(0),
                                                                                  edges[:, train_edge_mask],
                                                                                  sampling_src_idx, neighbor_dist_list)
-
                         else:
                             pass
                         beta = torch.distributions.beta.Beta(1, 100)
