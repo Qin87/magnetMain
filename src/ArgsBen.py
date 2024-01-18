@@ -13,7 +13,7 @@ def parse_args():
     parser.add_argument('--GPUdevice', type=int, default=0, help='gpu 0,1,2 for selene')
 
     # change less frequentl
-    parser.add_argument('--IsDirectedData', type=bool, default=False, help='the dataset is directed graph')
+    parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
     parser.add_argument('--dataset', type=str, default='cora_ml/', help='data set selection')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],

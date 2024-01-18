@@ -93,8 +93,8 @@ def main(args):
     except:
         data.edge_weight = None
 
-    if args.to_undirected:
-        data.edge_index = to_undirected(data.edge_index)
+    # if args.to_undirected:
+    #     data.edge_index = to_undirected(data.edge_index)
 
     # copy GraphSHA
     if args.dataset.split('/')[0].startswith('dgl'):

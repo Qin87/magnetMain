@@ -625,6 +625,7 @@ if __name__ == "__main__":
             args.alpha = float(setting_dict_curr[setting_dict_curr.index('alpha') + 1])
             args.heads = int(setting_dict_curr[setting_dict_curr.index('heads') + 1])
             args.to_undirected = (setting_dict_curr[setting_dict_curr.index('to_undirected') + 1] == 'True')
+            print("To undirected :", args.to_undirected)
             try:
                 args.num_filter = int(setting_dict_curr[setting_dict_curr.index('num_filter') + 1])
             except ValueError:

@@ -705,7 +705,7 @@ def sampling_node_source(class_num_list, prev_out_local, idx_info_local, train_i
                 pass
         dst_idx = torch.tensor(dst_idx).to(src_idx.device)
         # new_src_idx = torch.tensor(dst_idx).to(src_idx.device)
-        new_src_idx = torch.tensor(dst_idx, device=src_idx.device).clone().detach()
+        new_src_idx = torch.tensor(new_src_idx, device=src_idx.device).clone().detach()
 
         src_idx_all.append(new_src_idx)
         dst_idx_all.append(dst_idx)

@@ -79,6 +79,7 @@ def main(args):
 
     if args.to_undirected:
         data.edge_index = to_undirected(data.edge_index)
+    print("To undirected :", args.to_undirected)
 
     # copy GraphSHA
     if args.dataset.split('/')[0].startswith('dgl'):
