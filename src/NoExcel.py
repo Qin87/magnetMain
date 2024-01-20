@@ -229,7 +229,7 @@ def main(args):
     for split in range(splits):
         # if split >4:
         #     continue
-        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
+        # print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
                                                               data_val_maskOrigin.clone(),
