@@ -1,6 +1,6 @@
 # external files
 import os
-
+import tqdm
 import openpyxl
 import pandas as pd
 import pickle as pk
@@ -10,6 +10,8 @@ import time
 from openpyxl.reader.excel import load_workbook
 from sklearn.metrics import balanced_accuracy_score, f1_score
 import warnings
+
+from tqdm import tqdm
 
 from layer.DGCN import SymModel
 from layer.DiGCN import DiModel, DiGCN_IB
@@ -40,25 +42,25 @@ from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 def main(args):
     # ********************* write to excel
     date_time = datetime.now().strftime('%m-%d-%H:%M')
-    # date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
-    print(date_time)
-    if args.IsDirectedData:
-        excel_file_path = str(args.withAug) +str(args.AugDirect) +'Aug_' + date_time + '_'+ args.method_name + '_' + args.dataset.split('/')[
-            0]+args.dataset.split('/')[
-            1]  +'_dir.xlsx'
-    else:
-        excel_file_path = str(args.withAug) + str(args.AugDirect)+'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
-    print("excel_file_path is ", excel_file_path)
+    # # date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
+    # print(date_time)
+    # if args.IsDirectedData:
+    #     excel_file_path = str(args.withAug) +str(args.AugDirect) +'Aug_' + date_time + '_'+ args.method_name + '_' + args.dataset.split('/')[
+    #         0]+args.dataset.split('/')[
+    #         1]  +'_dir.xlsx'
+    # else:
+    #     excel_file_path = str(args.withAug) + str(args.AugDirect)+'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
+    # print("excel_file_path is ", excel_file_path)
 
-    writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')    # a new excel file
-    args_dict = vars(args)
-    df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
-    combined_data = df
-    if not combined_data.empty:
-        combined_data.to_excel(writerBen, sheet_name="Args", index=False)
-    else:
-        print("DataFrame is empty. Not writing to the Excel file.")
-    writerBen._save()
+    # writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')    # a new excel file
+    # args_dict = vars(args)
+    # df = pd.DataFrame(args_dict.items(), columns=['Argument', 'Value'])
+    # combined_data = df
+    # if not combined_data.empty:
+    #     combined_data.to_excel(writerBen, sheet_name="Args", index=False)
+    # else:
+    #     print("DataFrame is empty. Not writing to the Excel file.")
+    # writerBen._save()
     # ********************
 
     if args.randomseed > 0:
@@ -285,7 +287,8 @@ def main(args):
 
         existing_data2 = pd.DataFrame()
         CountNotImproved = 0
-        for epoch in range(args.epochs):
+        for epoch in tqdm(range(args.epoch)):
+        # for epoch in range(args.epochs):
             if CountNotImproved > 50:
                 opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
             else:
@@ -496,15 +499,16 @@ def main(args):
             #     print("Early stop at epoch: ", epoch)
             #     break
 
-            # end_time = time.time()
-            # epoch_time = end_time - start_time
-            # if epoch%2:
-            #     Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, time:{:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch,val_loss,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
-            # else:
-            #     end_time_datetime = datetime.fromtimestamp(end_time)
-            #     Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, present time:{:s}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(
-            #         epoch, val_loss, end_time_datetime.strftime("%H:%M:%S"), test_accSHA * 100, test_bacc * 100,
-            #         test_f1 * 100)
+            end_time = time.time()
+            epoch_time = end_time - start_time
+            if epoch%2:
+                Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, time:{:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch,val_loss,epoch_time, test_accSHA * 100, test_bacc * 100,test_f1 * 100)
+            else:
+                end_time_datetime = datetime.fromtimestamp(end_time)
+                Epoch_output_str = 'Epoch:{:3d}, Val_loss:{:6.2f}, present time:{:s}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(
+                    epoch, val_loss, end_time_datetime.strftime("%H:%M:%S"), test_accSHA * 100, test_bacc * 100,
+                    test_f1 * 100)
+            # print(Epoch_output_str)
             # df2 = pd.DataFrame({'Epoch_Output': [Epoch_output_str]})
             # df2 = pd.concat([df2, existing_data2])
             # existing_data2 = df2

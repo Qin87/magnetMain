@@ -225,8 +225,6 @@ def main(args):
     model.to(device)
 
     for split in range(splits):
-        # if split >4:
-        #     continue
         print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
@@ -492,9 +490,9 @@ def main(args):
                 test_f1 = f1s[2]
             else:
                 CountNotImproved += 1
-            if CountNotImproved > 500:
-                print("Early stop at epoch: ", epoch)
-                break
+            # if CountNotImproved > 500:
+            #     print("Early stop at epoch: ", epoch)
+            #     break
 
             end_time = time.time()
             epoch_time = end_time - start_time
