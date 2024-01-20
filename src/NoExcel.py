@@ -24,7 +24,7 @@ warnings.filterwarnings("ignore")
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
     neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin, \
-    neighbor_sampling_bidegree_variant1, neighbor_sampling_bidegree_variant2
+    neighbor_sampling_bidegree_variant1, neighbor_sampling_bidegree_variant2, neighbor_sampling_reverse
 # from layer.DiGCN import *
 from ArgsBen import parse_args
 from utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
@@ -303,7 +303,37 @@ def main(args):
             model.to(device)
             opt.zero_grad()  # clear the gradients of the model's parameters.
 
-            if args.withAug:
+            if args.AugDirect == 0:
+                if args.method_name == 'SymDiGCN':
+                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                                                                                         data_y.size(-1),
+                                                                                         data.edge_weight)
+                    try:
+                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                    except:
+                        model.to('cpu')
+                        data_x = data_x.to('cpu')
+                        edges = edges.to('cpu')
+                        edge_in = edge_in.to('cpu')
+                        edge_out = edge_out.to('cpu')
+                        in_weight = in_weight.to('cpu')
+                        out_weight = out_weight.to('cpu')
+                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                        model.to(device)
+                        data_x = data_x.to(device)
+                        edges = edges.to(device)
+                        edge_in = edge_in.to(device)
+                        edge_out = edge_out.to(device)
+                        in_weight = in_weight.to(device)
+                        out_weight = out_weight.to(device)
+
+                elif args.method_name == 'DiG':
+                    out = model(data_x, SparseEdges, edge_weight)
+                else:
+                    out = model(data_x, edges)
+                criterion(out[data_train_mask], data_y[data_train_mask]).backward()
+
+            else:
                 if epoch > args.warmup:
                     prev_out_local = prev_out[train_idx]
                     sampling_src_idx, sampling_dst_idx = sampling_node_source(class_num_list, prev_out_local,
@@ -312,6 +342,10 @@ def main(args):
                     if args.AugDirect == 1:
                         new_edge_index = neighbor_sampling(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx,
                                                            neighbor_dist_list)
+                    elif args.AugDirect == -1:
+                        new_edge_index = neighbor_sampling_reverse(data_x.size(0), edges[:, train_edge_mask],
+                                                                   sampling_src_idx,
+                                                                   neighbor_dist_list)
                     elif args.AugDirect == 2:
                         new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
                                                                   sampling_src_idx, neighbor_dist_list)
@@ -420,35 +454,6 @@ def main(args):
                 new_y = new_y.to(out.device)
                 criterion(out[new_train_mask], new_y).backward()
 
-            else:  # # without aug
-                if args.method_name == 'SymDiGCN':
-                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
-                                                                                         data_y.size(-1),
-                                                                                         data.edge_weight)
-                    try:
-                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                    except:
-                        model.to('cpu')
-                        data_x = data_x.to('cpu')
-                        edges = edges.to('cpu')
-                        edge_in = edge_in.to('cpu')
-                        edge_out = edge_out.to('cpu')
-                        in_weight = in_weight.to('cpu')
-                        out_weight = out_weight.to('cpu')
-                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                        model.to(device)
-                        data_x = data_x.to(device)
-                        edges = edges.to(device)
-                        edge_in = edge_in.to(device)
-                        edge_out = edge_out.to(device)
-                        in_weight = in_weight.to(device)
-                        out_weight = out_weight.to(device)
-
-                elif args.method_name == 'DiG':
-                    out = model(data_x, SparseEdges, edge_weight)
-                else:
-                    out = model(data_x, edges)
-                criterion(out[data_train_mask], data_y[data_train_mask]).backward()
             torch.cuda.empty_cache()
 
             with torch.no_grad():
