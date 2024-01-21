@@ -190,7 +190,7 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
             out = model(new_x, Sym_edges)   # all data + aug
         prev_out = (out[:data_x.size(0)]).detach().clone()
         add_num = out.shape[0] - data_train_mask.shape[0]
-        new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data.x.device)
+        new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
         new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
         
         criterion(out[new_train_mask], new_y).backward()
@@ -241,7 +241,7 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
             # out = model(data_x, edges[:, train_edge_mask])
             out = model(data_x, edges)
         # out = model(data.x, data.edge_index[:, train_edge_mask])
-        val_loss = F.cross_entropy(out[data_val_mask], data.y[data_val_mask])
+        val_loss = F.cross_entropy(out[data_val_mask], data_y[data_val_mask])
     optimizer.step()
     scheduler.step(val_loss)
     return num_features
@@ -428,7 +428,7 @@ def Uni_VarData():
     #     data.edge_index = to_undirected(data.edge_index)
 
     # copy GraphSHA
-    if args.undirect_dataset.split('/')[0].startswith('dgl'):
+    if args.Direct_dataset.split('/')[0].startswith('dgl'):
         edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
         data_y = data.ndata['label']
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
@@ -464,8 +464,8 @@ def Uni_VarData():
 
         class_num_list = [len(item) for item in train_node]
         idx_info = [torch.tensor(item) for item in train_node]
-    elif dataset == 'Amazon-Photo':
-        pass
+    # elif dataset == 'Amazon-Photo':
+    #     pass
     else:
         edges = data.edge_index  # for torch_geometric librar
         data_y = data.y
@@ -542,8 +542,8 @@ def test():
     for mask in [data_train_mask, data_val_mask, data_test_mask]:
         pred = logits[mask].max(1)[1]
         y_pred = pred.cpu().numpy()
-        y_true = data.y[mask].cpu().numpy()
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        y_true = data_y[mask].cpu().numpy()
+        acc = pred.eq(data_y[mask]).sum().item() / mask.sum().item()
         bacc = balanced_accuracy_score(y_true, y_pred)
         f1 = f1_score(y_true, y_pred, average='macro')
         accs.append(acc)
@@ -703,9 +703,9 @@ for split in range(splits):
         neighbor_dist_list = get_PPR_adj(data_x, edges[:,train_edge_mask], alpha=0.05, k=128, eps=None)
     elif args.gdc=='hk':
         # neighbor_dist_list = get_heat_adj(data.x, data.edge_index[:,train_edge_mask], t=5.0, k=None, eps=0.0001)
-        neighbor_dist_list = get_heat_adj(data.x, data.edge_index[:,train_edge_mask], t=5.0, k=None, eps=0.0001)
+        neighbor_dist_list = get_heat_adj(data_x, edges[:,train_edge_mask], t=5.0, k=None, eps=0.0001)
     elif args.gdc=='none':
-        neighbor_dist_list = get_ins_neighbor_dist(data.y.size(0), data.edge_index[:,train_edge_mask], data_train_mask, device)
+        neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:,train_edge_mask], data_train_mask, device)
 
     best_val_acc_f1 = 0
     saliency, prev_out = None, None
