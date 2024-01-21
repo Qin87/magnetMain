@@ -6,14 +6,19 @@ def parse_args():
     # choices=["baseline--graph attention.", "baseline--Digraph"]
 
     # change frequently
+<<<<<<< HEAD
     parser.add_argument('--AugDirect', type=int, default=2, help='0 for without Aug, 1 for one direction, 2 for bidirection aug edges, '
+=======
+    parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
+    parser.add_argument('--AugDirect', type=int, default=0, help='1 for one direction, 2 for bidirection aug edges, '
+>>>>>>> parent of 470d9b1 (delete withAug)
                                                                  '4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
     parser.add_argument('--method_name', type=str, default='SAGE', help='method name')   # Tested OK: APPNP, SymDiGCN
     parser.add_argument('--GPUdevice', type=int, default=0, help='gpu 0,1,2 for selene')
 
     # change less frequentl
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
-    parser.add_argument('--Direct_dataset', type=str, default='dgl/cora', help='dgl/cora, citeseer_npz/')
+    parser.add_argument('--Direct_dataset', type=str, default='citeseer_npz/', help='dgl/cora, citeseer_npz/')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
                         default='Cora', help='data set selection as GraphSHA')
@@ -54,7 +59,7 @@ def parse_args():
     parser.add_argument('--n_layer', type=int, default=2, help='the number of layers')
     parser.add_argument('--feat_dim', type=int, default=64, help='feature dimension')
     parser.add_argument('--warmup', type=int, default=5, help='warmup epoch')
-    parser.add_argument('--epoch', type=int, default=900, help='epoch')
+    parser.add_argument('--epoch', type=int, default=10, help='epoch')
     # parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--tau', type=int, default=2,
                         help='temperature in the sofax function when calculating confidence-based node hardness')
