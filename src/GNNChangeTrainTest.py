@@ -42,12 +42,16 @@ def main(args):
     date_time = datetime.now().strftime('%m-%d-%H:%M')
     # date_time = datetime.now().strftime('%m-%d-%H:%M:%S')
     print(date_time)
+
     if args.IsDirectedData:
-        excel_file_path = str(args.withAug) +str(args.AugDirect) +'Aug_' + date_time + '_'+ args.method_name + '_' + args.dataset.split('/')[
-            0]+args.dataset.split('/')[
-            1]  +'_dir.xlsx'
+        excel_file_path = str(args.AugDirect) + 'Aug_' + date_time + '_' + args.method_name + '_' + \
+                          args.Direct_dataset.split('/')[
+                              0] + args.Direct_dataset.split('/')[
+                              1] + '_dir.xlsx'
     else:
-        excel_file_path = str(args.withAug) + str(args.AugDirect)+'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
+        excel_file_path = str(
+            args.AugDirect) + 'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
+
     print("excel_file_path is ", excel_file_path)
 
     writerBen = pd.ExcelWriter(excel_file_path, engine='openpyxl')    # a new excel file
