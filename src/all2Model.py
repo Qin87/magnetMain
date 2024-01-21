@@ -41,7 +41,7 @@ from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
 from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 
-def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight):
+def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight):
     global class_num_list, idx_info, prev_out
     global data_train_mask, data_val_mask, data_test_mask
     # global edge_in, in_weight, edge_out, out_weight
@@ -131,29 +131,30 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
         _new_y = data_y[sampling_src_idx].clone()
         new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
 
+        Sym_edges = torch.cat([edges, new_edge_index], dim=1)
+        Sym_edges = torch.unique(Sym_edges, dim=1)
+        Sym_new_y = torch.cat((data_y, _new_y), dim=0)
         if args.method_name == 'SymDiGCN':
             # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),
             #                                                                      data.edge_weight)
-            Sym_edges = torch.cat([edges, new_edge_index], dim=1)
-            Sym_edges = torch.unique(Sym_edges, dim=1)
-            Sym_new_y = torch.cat((data_y, _new_y), dim=0)
+
             data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),data.edge_weight)  # all edge and all y, not only train
 
             # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(new_edge_index, new_y.size(-1),data.edge_weight)
 
         elif args.method_name == 'APPNP' or 'DiG':
-            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(), new_y.size(-1), data_x.dtype)
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
             edge_index1 = edge_index1.to(device)
             edge_weights1 = edge_weights1.to(device)
             if args.method_name[-2:] == 'ib':
-                edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1), data_x.dtype)
+                edge_index2, edge_weights2 = get_second_directed_adj(Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
                 edge_index2 = edge_index2.to(device)
                 edge_weights2 = edge_weights2.to(device)
-                SparseEdges = (edge_index1, edge_index2)
+                new_SparseEdges = (edge_index1, edge_index2)
                 edge_weight = (edge_weights1, edge_weights2)
                 del edge_index2, edge_weights2
             else:
-                SparseEdges = edge_index1
+                new_SparseEdges = edge_index1
                 edge_weight = edge_weights1
             del edge_index1, edge_weights1
         else:
@@ -183,9 +184,10 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
 
 
         elif args.method_name == 'DiG':
-            out = model(new_x, SparseEdges, edge_weight)
+            out = model(new_x, new_SparseEdges, edge_weight)  # all data+ aug
         else:
-            out = model(new_x, new_edge_index)
+            # out = model(new_x, new_edge_index)   # all train data + aug
+            out = model(new_x, Sym_edges)   # all data + aug
         prev_out = (out[:data_x.size(0)]).detach().clone()
         add_num = out.shape[0] - data_train_mask.shape[0]
         new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data.x.device)
@@ -217,6 +219,23 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
                 out_weight = out_weight.to(device)
 
         elif args.method_name == 'DiG':
+
+            # must keep this, don't know why, but will be error without it----to analysis it later
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                SparseEdges = (edge_index1, edge_index2)
+                edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                SparseEdges = edge_index1
+                edge_weight = edge_weights1
+            del edge_index1, edge_weights1
+
             out = model(data_x, SparseEdges, edge_weight)
         else:
             # out = model(data_x, edges[:, train_edge_mask])
@@ -516,7 +535,7 @@ def test():
     if args.method_name == 'SymDiGCN':
         logits = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
     elif args.method_name == 'DiG':
-        logits = model(data_x, n_SparseEdges, edge_weight)
+        logits = model(data_x, SparseEdges, edge_weight)
     else:
         logits = model(data_x, edges[:, train_edge_mask])
     accs, baccs, f1s = [], [], []
@@ -584,6 +603,11 @@ try:
     data.edge_weight = torch.FloatTensor(data.edge_weight)
 except:
     data.edge_weight = None
+
+edge_in = None
+in_weight = None
+edge_out = None
+out_weight = None
 
 if args.method_name == 'SymDiGCN':
     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),data.edge_weight)
@@ -687,7 +711,7 @@ for split in range(splits):
     saliency, prev_out = None, None
     test_acc, test_bacc, test_f1 = 0.0, 0.0, 0.0
     for epoch in tqdm(range(args.epoch)):
-        num_features= train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight)
+        num_features= train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight)
         accs, baccs, f1s = test()
         train_acc, val_acc, tmp_test_acc = accs
         train_f1, val_f1, tmp_test_f1 = f1s
