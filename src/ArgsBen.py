@@ -8,7 +8,12 @@ def parse_args():
     # change frequently
 <<<<<<< HEAD
 <<<<<<< HEAD
+<<<<<<< HEAD
     parser.add_argument('--AugDirect', type=int, default=2, help='0 for without Aug, 1 for one direction, 2 for bidirection aug edges, '
+=======
+    parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
+    parser.add_argument('--AugDirect', type=int, default=0, help='1 for one direction, 2 for bidirection aug edges, '
+>>>>>>> parent of 470d9b1 (delete withAug)
 =======
     parser.add_argument('--withAug', type=bool, default=True, help='with Aug or not')
     parser.add_argument('--AugDirect', type=int, default=0, help='1 for one direction, 2 for bidirection aug edges, '
