@@ -217,6 +217,7 @@ def main(args):
             data_num = (stats == i).sum()
             n_data.append(int(data_num.item()))
         idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
+
         if args.MakeImbalance:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
                 make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())

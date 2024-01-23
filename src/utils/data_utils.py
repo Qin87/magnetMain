@@ -265,6 +265,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
         for r in range(1, n_round[i]+1):
             # Find removed nodes
             node_mask = label.new_ones(label.size(), dtype=torch.bool)
+            node_mask = node_mask.cuda()  # Ben for GPU
             # new_ones is a PyTorch function used to create a new tensor of ones with the specified shape and data type.
             # print("Initialize all true: ", node_mask[:10])
             node_mask[sum(remove_idx_list, [])] = False
