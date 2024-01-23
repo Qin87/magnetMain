@@ -256,6 +256,8 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     cls_idx_list = []   # nodes belong to class i
     index_list = torch.arange(len(train_mask))
     original_mask = train_mask.clone()
+    label = label.cpu()
+    original_mask = original_mask.cpu()
     for i in range(n_cls):
         cls_idx_list.append(index_list[(label == i) & original_mask])
 
