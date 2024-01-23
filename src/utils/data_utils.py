@@ -260,7 +260,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     original_mask = original_mask.cpu()
     for i in range(n_cls):
         cls_idx_list.append(index_list[(label == i) & original_mask])
-    cls_idx_list = cls_idx_list.cuda()  # Ben for GPU
+    cls_idx_list = [tensor.cuda() for tensor in cls_idx_list]  # Ben for GPU
     for i in indices.numpy():
         for r in range(1, n_round[i]+1):
             # Find removed nodes
