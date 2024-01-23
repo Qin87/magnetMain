@@ -82,6 +82,8 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
         Col_degree[sampling_src_idx])
     temp = scatter_add(torch.ones_like(sampling_src_idx), sampling_src_idx).to(device)  # Row_degree of anchor nodes
     node_mask = torch.zeros(total_node, dtype=torch.bool)
+    if torch.cuda.is_available():
+        node_mask = node_mask.cuda()
     unique_src = torch.unique(sampling_src_idx)
     node_mask[unique_src] = True  # get the torch where anchor nodes position are True
 
@@ -791,7 +793,8 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     prob = torch.log(new_class_num_list.float()) / new_class_num_list.float()
     prob = prob.repeat_interleave(new_class_num_list.long())
     temp_idx_info = torch.cat(idx_info)
-    temp_idx_info = temp_idx_info.cuda()    # Ben for GPU
+    if torch.cuda.is_available():
+        temp_idx_info = temp_idx_info.cuda()    # Ben for GPU
     for cls_idx, samp_num in zip(idx_info, sampling_list):
         samp_num = int(samp_num.item())
         if samp_num <= 0:
