@@ -155,6 +155,7 @@ def get_idx_info(label, n_cls, train_mask):
     index_list = torch.arange(len(label))   # [0,1,2...]
     idx_info = []
     for i in range(n_cls):
+        train_mask = train_mask.to(label.device)    # for GPU run
         cls_indices = index_list[((label == i) & train_mask)]
         # creating a boolean mask by comparing elements of label with the value i
         # and then performing element-wise logical AND operation with train_mask.
