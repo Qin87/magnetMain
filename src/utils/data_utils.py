@@ -303,6 +303,8 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
 
     train_mask = node_mask & train_mask
     idx_info = []
+    label = label.cpu()     # Ben for GPU
+    train_mask = train_mask.cpu()
     for i in range(n_cls):
         cls_indices = index_list[(label == i) & train_mask]
         idx_info.append(cls_indices)
