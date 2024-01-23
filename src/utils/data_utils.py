@@ -291,8 +291,8 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
             # remove_idx_list[i] = list(remove_idx.numpy())
 
     # Find removed nodes
-    node_mask = node_mask.cuda()  # Ben for GPU
     node_mask = label.new_ones(label.size(), dtype=torch.bool)
+    node_mask = node_mask.cuda()  # Ben for GPU
     node_mask[sum(remove_idx_list, [])] = False
 
     # Remove connection with removed nodes
