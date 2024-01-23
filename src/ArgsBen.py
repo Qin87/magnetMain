@@ -13,7 +13,7 @@ def parse_args():
 
     # change less frequentl
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
-    parser.add_argument('--Direct_dataset', type=str, default='dgl/cora', help='dgl/cora, citeseer_npz/')
+    parser.add_argument('--Direct_dataset', type=str, default='cora_ml/', help='dgl/cora, citeseer_npz/')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
                         default='Cora', help='data set selection as GraphSHA')
@@ -65,5 +65,3 @@ def parse_args():
     parser.add_argument('--gdc', type=str, choices=['ppr', 'hk', 'none'], default='ppr',
                         help='how to convert to weighted graph')
     return parser.parse_args()
-
-
