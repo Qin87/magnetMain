@@ -260,12 +260,16 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     original_mask = original_mask.cpu()
     for i in range(n_cls):
         cls_idx_list.append(index_list[(label == i) & original_mask])
-    cls_idx_list = [tensor.cuda() for tensor in cls_idx_list]  # Ben for GPU
+    if torch.cuda.is_available():
+        cls_idx_list = [tensor.cuda() for tensor in cls_idx_list]  # Ben for GPU
+    else:
+        pass
     for i in indices.numpy():
         for r in range(1, n_round[i]+1):
             # Find removed nodes
             node_mask = label.new_ones(label.size(), dtype=torch.bool)
-            node_mask = node_mask.cuda()  # Ben for GPU
+            if torch.cuda.is_available():
+                node_mask = node_mask.cuda()  # Ben for GPU
             # new_ones is a PyTorch function used to create a new tensor of ones with the specified shape and data type.
             # print("Initialize all true: ", node_mask[:10])
             node_mask[sum(remove_idx_list, [])] = False
@@ -292,7 +296,8 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
 
     # Find removed nodes
     node_mask = label.new_ones(label.size(), dtype=torch.bool)
-    node_mask = node_mask.cuda()  # Ben for GPU
+    if torch.cuda.is_available():
+        node_mask = node_mask.cuda()  # Ben for GPU
     node_mask[sum(remove_idx_list, [])] = False
 
     # Remove connection with removed nodes
