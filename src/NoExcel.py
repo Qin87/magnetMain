@@ -364,6 +364,7 @@ def main(args):
 
                     add_num = len(sampling_src_idx)  # Ben
                     new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+                    new_train_mask = new_train_mask.to(data_train_mask.device)      # Ben for GPU
                     new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
                     _new_y = data_y[sampling_src_idx].clone()
                     new_y = torch.cat((data_y, _new_y), dim=0)  #
