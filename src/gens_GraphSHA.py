@@ -816,6 +816,10 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     prob = torch.log(new_class_num_list.float()) / new_class_num_list.float()   # why use this as prob?
     prob = prob.repeat_interleave(new_class_num_list.long())
     temp_idx_info = torch.cat(idx_info)
+    if torch.cuda.is_available():       # Ben for GPU
+        temp_idx_info = temp_idx_info.cuda()
+    else:
+        pass
     dst_idx = torch.multinomial(prob, sampling_src_idx.shape[0], True)
     sampling_dst_idx = temp_idx_info[dst_idx]
 
