@@ -234,6 +234,7 @@ def main(args):
         idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
                           idx_info_list]  # train nodes position inside train
 
+        train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
         if args.gdc == 'ppr':
             neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
         elif args.gdc == 'hk':
