@@ -559,6 +559,7 @@ cuda_device = args.GPUdevice
 if torch.cuda.is_available():
     print("CUDA Device Index:", cuda_device)
     device = torch.device("cuda:%d" % cuda_device)
+    torch.cuda.set_device(device)
 else:
     print("CUDA is not available, using CPU.")
     device = torch.device("cpu")

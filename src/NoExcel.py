@@ -103,8 +103,6 @@ def main(args):
 
         class_num_list = [len(item) for item in train_node]
         idx_info = [torch.tensor(item) for item in train_node]
-    elif dataset == 'Amazon-Photo':
-        pass
     else:
         edges = data.edge_index  # for torch_geometric librar
         data_y = data.y
@@ -519,6 +517,7 @@ if __name__ == "__main__":
         if torch.cuda.is_available():
             print("CUDA Device Index:", cuda_device)
             device = torch.device("cuda:%d" % cuda_device)
+            torch.cuda.set_device(device)
         else:
             print("CUDA is not available, using CPU.")
             device = torch.device("cpu")
