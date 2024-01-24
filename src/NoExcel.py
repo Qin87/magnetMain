@@ -403,12 +403,12 @@ def main(args):
                         edge_out = edge_out.to('cpu')
                         out_weight = out_weight.to('cpu')
                         out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
-                        new_x = new_x.to(device)
-                        data.edge_index = data.edge_index.to(device)
-                        edge_in = edge_in.to(device)
-                        in_weight = in_weight.to(device)
-                        edge_out = edge_out.to(device)
-                        out_weight = out_weight.to(device)
+                        # new_x = new_x.to(device)
+                        # data.edge_index = data.edge_index.to(device)
+                        # edge_in = edge_in.to(device)
+                        # in_weight = in_weight.to(device)
+                        # edge_out = edge_out.to(device)
+                        # out_weight = out_weight.to(device)
                 elif args.method_name == 'DiG':
                     try:
                         out = model(new_x, new_SparseEdges, new_edge_weight)  #
@@ -446,6 +446,7 @@ def main(args):
             with torch.no_grad():
                 model.eval()
                 if args.method_name == 'SymDiGCN':
+
                     out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
                 elif args.method_name == 'DiG':
                     out = model(data_x, SparseEdges, edge_weight)
