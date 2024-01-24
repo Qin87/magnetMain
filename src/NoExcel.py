@@ -334,7 +334,8 @@ def main(args):
                     add_num = new_x.shape[0] - data_x.shape[0]  # Ben
                     new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
                     new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
-                    new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+                    # new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+                    new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0).cpu()  # for GPU
                     _new_y = data_y[sampling_src_idx.long()].clone()
                     new_y = torch.cat((data_y, _new_y), dim=0)  #
 
@@ -359,6 +360,8 @@ def main(args):
 
                 else:
                     sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
+                    sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
+                    sampling_dst_idx = sampling_dst_idx.cpu()
                     beta = torch.distributions.beta.Beta(2, 2)
                     lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
                     new_edge_index = duplicate_neighbor(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx)
@@ -408,8 +411,11 @@ def main(args):
                             out = model(new_x, new_edge_index)
                         except TypeError:
                             out= model(new_x)
-
-                prev_out = (out[:data_x.size(0)]).clone().to(device)
+                try:
+                    prev_out = (out[:data_x.size(0)]).clone().to(device)
+                except:
+                    data_x = data_x.cpu()
+                    prev_out = (out[:data_x.size(0)]).clone().to(device)
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
                 new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y = new_y.to(out.device)
