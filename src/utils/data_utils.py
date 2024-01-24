@@ -309,6 +309,8 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
 
     # Remove connection with removed nodes
     row, col = edge_index[0], edge_index[1]
+    row = row.cpu()  # Ben for GPU
+    col = col.cpu()
     row_mask = node_mask[row]
     col_mask = node_mask[col]
     edge_mask = row_mask & col_mask
