@@ -392,8 +392,24 @@ def main(args):
                     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
                                                                                          data_y.size(-1),
                                                                                          data.edge_weight)
-                    out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
-                else:
+                    try:
+                        out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                    except:     # for GPU
+                        model.to('cpu')
+                        new_x = new_x.to('cpu')
+                        data.edge_index = data.edge_index.to('cpu')
+                        edge_in = edge_in.to('cpu')
+                        in_weight = in_weight.to('cpu')
+                        edge_out = edge_out.to('cpu')
+                        out_weight = out_weight.to('cpu')
+                        out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                        new_x = new_x.to(device)
+                        data.edge_index = data.edge_index.to(device)
+                        edge_in = edge_in.to(device)
+                        in_weight = in_weight.to(device)
+                        edge_out = edge_out.to(device)
+                        out_weight = out_weight.to(device)
+                elif args.method_name == 'DiG':
                     try:
                         out = model(new_x, new_SparseEdges, new_edge_weight)  #
                     except RuntimeError:
@@ -406,11 +422,11 @@ def main(args):
                         new_x = new_x.to(device)
                         new_SparseEdges = new_SparseEdges.to(device)
                         new_edge_weight = new_edge_weight.to(device)
+                else:
+                    try:
+                        out = model(new_x, new_edge_index)
                     except TypeError:
-                        try:
-                            out = model(new_x, new_edge_index)
-                        except TypeError:
-                            out= model(new_x)
+                        out= model(new_x)
                 try:
                     prev_out = (out[:data_x.size(0)]).clone().to(device)
                 except:
