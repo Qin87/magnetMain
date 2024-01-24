@@ -150,8 +150,6 @@ def main(args):
             edge_weight = edge_weights1
         del edge_index1, edge_weights1
 
-    data = data.to(device)
-    existing_data3 = pd.DataFrame()
 
     if args.method_name == 'GAT':
         model = create_gat(nfeat=dataset_num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
