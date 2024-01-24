@@ -825,11 +825,13 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     else:
         pass
     dst_idx = torch.multinomial(prob, sampling_src_idx.shape[0], True)
+    dst_idx = dst_idx.cpu()  # not on the same GPU, weird. Ben
     sampling_dst_idx = temp_idx_info[dst_idx]
 
     # Sorting src idx with corresponding dst idx
     # the first is ascending ordered new tensor, the second is the original index
     sampling_src_idx, sorted_idx = torch.sort(sampling_src_idx)
+    sorted_idx = sorted_idx.cpu()       # Ben in case for GPU
     sampling_dst_idx = sampling_dst_idx[sorted_idx]
     # print(sampling_src_idx, sampling_dst_idx)
 
