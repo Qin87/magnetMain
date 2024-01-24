@@ -119,8 +119,6 @@ def main(args):
     print("This is directed graph: ", IsDirectedGraph)
     print("data_x", data_x.shape)  # [11701, 300])
 
-    data = data.to(device)
-
     data_y = data_y.long()
     n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
     n_cls = torch.tensor(n_cls).to(device)
