@@ -288,7 +288,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
 
             # Compute degree
             degree = scatter_add(torch.ones_like(col[edge_mask]), col[edge_mask], dim_size=label.size(0)).to(row.device)
-            if torch.cuda.is_available():
+            if torch.cuda.is_available():       # Ben for GPU
                 degree = degree.cuda()
             degree = degree[cls_idx_list[i]]
             _, remove_idx = torch.topk(degree, (r*remove_class_num_list[i])//n_round[i], largest=False)
@@ -309,10 +309,11 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     col_mask = node_mask[col]
     edge_mask = row_mask & col_mask
 
-    train_mask = node_mask & train_mask
-    idx_info = []
     label = label.cpu()     # Ben for GPU
     train_mask = train_mask.cpu()
+    node_mask = node_mask.cpu()
+    train_mask = node_mask & train_mask
+    idx_info = []
     for i in range(n_cls):
         cls_indices = index_list[(label == i) & train_mask]
         idx_info.append(cls_indices)
