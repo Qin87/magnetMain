@@ -68,7 +68,7 @@ def main(args):
         data.edge_weight = None
 
     # copy GraphSHA
-    if args.Direct_dataset.split('/')[0].startswith('dgl'):
+    if args.IsDirectedData and args.Direct_dataset.split('/')[0].startswith('dgl'):
         edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
         data_y = data.ndata['label']
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
