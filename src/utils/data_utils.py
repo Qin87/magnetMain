@@ -276,7 +276,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
             # print("Setting some as false", node_mask[:10])
 
             # Remove connection with removed nodes
-            row, col = edge_index[0], edge_index[1]
+            row, col = edge_index[0].cpu(), edge_index[1].cpu()     # Ben for GPU
             # print("row is ", row.shape, row[:10])
             # # torch.Size([10556]) tensor([0, 0, 0, 1, 1, 1, 2, 2, 2, 2])
             # print("col is ", row.shape, col[:10])
@@ -292,10 +292,11 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
                 degree = degree.cuda()
             degree = degree[cls_idx_list[i]]
             _, remove_idx = torch.topk(degree, (r*remove_class_num_list[i])//n_round[i], largest=False)
+            remove_idx = remove_idx.cpu()       # # Ben for GPU
             remove_idx = cls_idx_list[i][remove_idx]
 
-            remove_idx_list[i] = list(remove_idx.cpu().numpy())  # Ben for GPU
-            # remove_idx_list[i] = list(remove_idx.numpy())
+            # remove_idx_list[i] = list(remove_idx.cpu().numpy())
+            remove_idx_list[i] = list(remove_idx.numpy())
 
     # Find removed nodes
     node_mask = label.new_ones(label.size(), dtype=torch.bool)
