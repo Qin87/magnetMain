@@ -6,7 +6,7 @@ def parse_args():
     # choices=["baseline--graph attention.", "baseline--Digraph"]
 
     # change frequently
-    parser.add_argument('--AugDirect', type=int, default=20
+    parser.add_argument('--AugDirect', type=int, default=23
                         , help='1 for one direction, 2 for bidirection aug edges, '
                                                                  '4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
     parser.add_argument('--method_name', type=str, default='SymDiGCN', help='method name')   # Tested OK: APPNP, SymDiGCN
