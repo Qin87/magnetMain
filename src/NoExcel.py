@@ -503,13 +503,17 @@ if __name__ == "__main__":
     args = parse_args()
     print(args)
 
-    cuda_device = args.GPUdevice
-    if torch.cuda.is_available():
-        print("CUDA Device Index:", cuda_device)
-        device = torch.device("cuda:%d" % cuda_device)
-    else:
-        print("CUDA is not available, using CPU.")
+    if args.method_name == 'DiG':
+        print("DiG always fail in cuda, using CPU.")
         device = torch.device("cpu")
+    else:
+        cuda_device = args.GPUdevice
+        if torch.cuda.is_available():
+            print("CUDA Device Index:", cuda_device)
+            device = torch.device("cuda:%d" % cuda_device)
+        else:
+            print("CUDA is not available, using CPU.")
+            device = torch.device("cpu")
 
     main(args)
     end_sum_time = time.time()

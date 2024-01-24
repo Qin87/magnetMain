@@ -297,6 +297,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
             remove_idx = remove_idx.cpu()       # # Ben for GPU
             remove_idx = cls_idx_list[i][remove_idx]
 
+            remove_idx = remove_idx.cpu()       # # Ben for GPU for the next line!
             # remove_idx_list[i] = list(remove_idx.cpu().numpy())
             remove_idx_list[i] = list(remove_idx.numpy())
 
