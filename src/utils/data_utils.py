@@ -288,6 +288,8 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
 
             # Compute degree
             degree = scatter_add(torch.ones_like(col[edge_mask]), col[edge_mask], dim_size=label.size(0)).to(row.device)
+            if torch.cuda.is_available():
+                degree = degree.cuda()
             degree = degree[cls_idx_list[i]]
             _, remove_idx = torch.topk(degree, (r*remove_class_num_list[i])//n_round[i], largest=False)
             remove_idx = cls_idx_list[i][remove_idx]
