@@ -103,6 +103,7 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
         Row_degree[unique_src])  # anchor nodes' Row_degree
     # print(b_idx[:10], np.shape(b_idx))  # tensor([0, 0, 1, 1, 1, 1, 2, 2, 2, 2]) torch.Size([1380])
 
+    edge_mask = edge_mask.to(device)        # Ben for GPU
     edge_dense, _ = to_dense_batch(edge_mask, b_idx, fill_value=-1)
     # print("edge_mask is ", edge_mask[:10], "\nb_idx is ", b_idx[:10])
     # print(edge_dense[:10], np.shape(edge_dense))    # torch.Size([241, 155])  torch.Size([240, 29])
