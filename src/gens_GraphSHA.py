@@ -651,11 +651,13 @@ def neighbor_sampling(total_node, edge_index, sampling_src_idx,
     # print("wy,,,", sampling_src_idx)
     try:
         mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
-
     except:
-        sampling_src_idx = sampling_src_idx.cpu()       # Ben for GPU: indice in cpu or
-
-        mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
+        try:
+            neighbor_dist_list = neighbor_dist_list.to(device)   # Ben for GPU: indice in cpu or same as indexed
+            mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+        except:
+            sampling_src_idx = sampling_src_idx.cpu()       # Ben for GPU: indice in cpu or
+            mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
 # Compute degree
     col = edge_index[1]
     degree = scatter_add(torch.ones_like(col), col)  # Ben only col degree
@@ -679,7 +681,11 @@ def neighbor_sampling(total_node, edge_index, sampling_src_idx,
     # Sample neighbors
     new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, max_degree)
     tgt_index = torch.arange(max_degree).unsqueeze(dim=0).to(device)
-    new_col = new_tgt[(tgt_index - aug_degree.unsqueeze(dim=1) < 0)]
+    try:
+        new_col = new_tgt[(tgt_index - aug_degree.unsqueeze(dim=1) < 0)]
+    except:
+        new_tgt = new_tgt.to(device)
+        new_col = new_tgt[(tgt_index - aug_degree.unsqueeze(dim=1) < 0)]
     # print("new_col: ", new_col, new_col.shape)   # new_col:  tensor([], dtype=torch.int64) torch.Size([0])
     new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
     new_row = new_row.repeat_interleave(aug_degree)
