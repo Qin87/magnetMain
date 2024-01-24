@@ -649,9 +649,14 @@ def neighbor_sampling(total_node, edge_index, sampling_src_idx,
     # Find the nearest nodes and mix target pool
     sampling_src_idx = sampling_src_idx.long()
     # print("wy,,,", sampling_src_idx)
-    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
+    try:
+        mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
 
-    # Compute degree
+    except:
+        sampling_src_idx = sampling_src_idx.cpu()       # Ben for GPU: indice in cpu or
+
+        mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
+# Compute degree
     col = edge_index[1]
     degree = scatter_add(torch.ones_like(col), col)  # Ben only col degree
     if len(degree) < total_node:
