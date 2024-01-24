@@ -809,6 +809,7 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     sampling_dst_idx = torch.cat(sampling_dst_idx)
     # Sample indices for src
     src_idx = torch.multinomial(prob, sampling_dst_idx.shape[0], True)
+    src_idx = src_idx.cpu()     # not on the same GPU, weird. Ben
     sampling_src_idx = temp_idx_info[src_idx]
     # print("\nChatGPT samp_src_idx", sampling_src_idx.shape)
 
