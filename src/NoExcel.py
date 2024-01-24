@@ -283,13 +283,13 @@ def main(args):
                         in_weight = in_weight.to('cpu')
                         out_weight = out_weight.to('cpu')
                         out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                        model.to(device)
-                        data_x = data_x.to(device)
-                        edges = edges.to(device)
-                        edge_in = edge_in.to(device)
-                        edge_out = edge_out.to(device)
-                        in_weight = in_weight.to(device)
-                        out_weight = out_weight.to(device)
+                        # model.to(device)
+                        # data_x = data_x.to(device)
+                        # edges = edges.to(device)
+                        # edge_in = edge_in.to(device)
+                        # edge_out = edge_out.to(device)
+                        # in_weight = in_weight.to(device)
+                        # out_weight = out_weight.to(device)
 
                 elif args.method_name == 'DiG':
                     out = model(data_x, SparseEdges, edge_weight)
@@ -297,6 +297,7 @@ def main(args):
                     out = model(data_x, edges)
                 criterion(out[data_train_mask], data_y[data_train_mask]).backward()
             else: # with Aug
+                train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
                 if epoch > args.warmup:
                     prev_out_local = prev_out[train_idx]
                     sampling_src_idx, sampling_dst_idx = sampling_node_source(class_num_list, prev_out_local,
