@@ -70,6 +70,7 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
     # print(row.shape, edge_index.shape)
     Row_degree = scatter_add(torch.ones_like(row), row)  # torch.Size([51]) torch.Size([2, 51])
     Col_degree = scatter_add(torch.ones_like(col), col)  # Ben
+    sampling_src_idx = sampling_src_idx.cpu()       # Ben for GPU
     for i in [Row_degree, Col_degree]:
         if i.shape[0] < total_node:
             num_zeros = total_node - len(i)
