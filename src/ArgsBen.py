@@ -9,7 +9,7 @@ def parse_args():
     parser.add_argument('--AugDirect', type=int, default=20
                         , help='1 for one direction, 2 for bidirection aug edges, '
                                                                  '4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
-    parser.add_argument('--method_name', type=str, default='DiG', help='method name')   # Tested OK: APPNP, SymDiGCN
+    parser.add_argument('--method_name', type=str, default='SymDiGCN', help='method name')   # Tested OK: APPNP, SymDiGCN
     parser.add_argument('--GPUdevice', type=int, default=1, help='gpu 0,1,2 for selene')
 
     # change less frequentl
