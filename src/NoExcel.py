@@ -57,8 +57,8 @@ def main(args):
     try:
         data = data.to(device)
     except:     # dgl cuda version hard to install
-        device = torch.device("cpu")
-        data = data.to(device)
+        # device = torch.device("cpu")
+        data = data.to(torch.device("cpu"))
 
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin  # data split: train, validation, test

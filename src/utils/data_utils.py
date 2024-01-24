@@ -284,6 +284,7 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
             row_mask = node_mask[row]
             col_mask = node_mask[col]
             edge_mask = row_mask & col_mask  # elementwise "and"
+            edge_mask = edge_mask.cpu()  # Ben for GPU
 
             # Compute degree
             degree = scatter_add(torch.ones_like(col[edge_mask]), col[edge_mask], dim_size=label.size(0)).to(row.device)
