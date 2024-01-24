@@ -299,6 +299,7 @@ def main(args):
             else: # with Aug
                 train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
                 if epoch > args.warmup:
+                    train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
                     prev_out_local = prev_out[train_idx]
                     sampling_src_idx, sampling_dst_idx = sampling_node_source(class_num_list, prev_out_local,
                                                                               idx_info_local, train_idx, args.tau,
@@ -321,10 +322,10 @@ def main(args):
                                                                           sampling_src_idx, neighbor_dist_list)
                     elif args.AugDirect == 22:
                         new_edge_index = neighbor_sampling_bidegree_variant1(data_x.size(0), edges[:, train_edge_mask],
-                                                                          sampling_src_idx, neighbor_dist_list)
+                                                                             sampling_src_idx, neighbor_dist_list)
                     elif args.AugDirect == 23:
                         new_edge_index = neighbor_sampling_bidegree_variant2(data_x.size(0), edges[:, train_edge_mask],
-                                                                          sampling_src_idx, neighbor_dist_list)
+                                                                             sampling_src_idx, neighbor_dist_list)
 
                     else:
                         pass
