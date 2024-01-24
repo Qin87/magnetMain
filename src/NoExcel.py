@@ -419,6 +419,8 @@ def main(args):
                 _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
                 new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
                 new_y = new_y.to(out.device)
+                new_train_mask = new_train_mask.to(out.device)  # Ben for GPU
+                print(out.device)
                 criterion(out[new_train_mask], new_y).backward()
 
 
