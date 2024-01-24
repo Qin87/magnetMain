@@ -360,6 +360,7 @@ def main(args):
                     del edge_index1, edge_weights1
 
                 else:
+                    train_edge_mask = train_edge_mask.cpu()     # Ben for GPU, must here insert this
                     sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
                     sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
                     sampling_dst_idx = sampling_dst_idx.cpu()
