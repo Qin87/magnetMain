@@ -88,8 +88,8 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
     unique_src = torch.unique(sampling_src_idx)
     node_mask[unique_src] = True  # get the torch where anchor nodes position are True
 
-    row_mask = node_mask[row]  # select node in row, row_mask is bool. is Anchor node or not
-    col_mask = node_mask[col]
+    row_mask = node_mask[row].cpu()  # select node in row, row_mask is bool. is Anchor node or not
+    col_mask = node_mask[col].cpu()
     edge_mask = col[row_mask]  # anchor nodes' edge
     Newedge_mask = row[col_mask]
     # print("row_mask is", row_mask[:20], np.shape(row_mask))  # torch.Size([7798])
