@@ -377,6 +377,8 @@ def main(args):
                     new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
                     new_train_mask = new_train_mask.to(data_train_mask.device)      # Ben for GPU
                     new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+                    # sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
+                    data_y = data_y.to(device)
                     _new_y = data_y[sampling_src_idx].clone()
                     new_y = torch.cat((data_y, _new_y), dim=0)  #
                     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
