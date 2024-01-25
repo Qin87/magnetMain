@@ -240,6 +240,7 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
         prev_out = (out[:data_x.size(0)]).detach().clone()
         add_num = out.shape[0] - data_train_mask.shape[0]
         new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+        data_train_mask = data_train_mask.to(new_train_mask.device)
         new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
         
         criterion(out[new_train_mask], new_y).backward()
