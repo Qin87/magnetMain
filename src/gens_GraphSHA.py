@@ -226,7 +226,7 @@ def neighbor_sampling_BiEdge(total_node, edge_index, sampling_src_idx,
     aug_degree = torch.min(aug_degree, degree[sampling_src_idx])
 
     # Sample neighbors
-    new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, max_degree)
+    new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, max_degree).to(device)
     tgt_index = torch.arange(max_degree).unsqueeze(dim=0).to(device)
     new_col = new_tgt[(tgt_index - aug_degree.unsqueeze(dim=1) < 0)]
     new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
@@ -296,8 +296,8 @@ def neighbor_sampling_bidegreeOrigin(total_node, edge_index, sampling_src_idx,
     row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
 
     # Sample neighbors
-    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
-    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree).to(device)
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree).to(device)
     # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
     col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
     row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
@@ -372,8 +372,8 @@ def neighbor_sampling_bidegree(total_node, edge_index, sampling_src_idx,
     row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
 
     # Sample neighbors
-    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
-    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree).to(device)
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree).to(device)
     # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
     col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
     row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
@@ -448,8 +448,8 @@ def neighbor_sampling_bidegree_variant1(total_node, edge_index, sampling_src_idx
     row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
 
     # Sample neighbors
-    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
-    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree).to(device)
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree).to(device)
     # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
     col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
     row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
@@ -524,8 +524,8 @@ def neighbor_sampling_bidegree_variant2(total_node, edge_index, sampling_src_idx
     row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
 
     # Sample neighbors
-    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
-    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree).to(device)
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree).to(device)
     # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
     col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
     row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
