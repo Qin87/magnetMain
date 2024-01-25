@@ -443,7 +443,7 @@ def main(args):
                 out = out.to(device)
                 new_y = new_y.to(out.device)
                 new_train_mask = new_train_mask.to(out.device)  # Ben for GPU
-                print(out.device)
+                # print("out.device", out.device)
                 criterion(out[new_train_mask], new_y).backward()
 
 

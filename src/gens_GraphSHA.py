@@ -568,6 +568,7 @@ def neighbor_sampling_BiEdge_bidegree(total_node, edge_index, sampling_src_idx,
 
     # Find the nearest nodes and mix target pool
     sampling_src_idx = torch.tensor(sampling_src_idx, dtype=torch.long)  # Adjust dtype as needed
+    print(neighbor_dist_list.device, sampling_src_idx.device)
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
 
     # print(neighbor_dist_list)
