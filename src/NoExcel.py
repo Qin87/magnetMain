@@ -296,6 +296,7 @@ def main(args):
                 criterion(out[data_train_mask], data_y[data_train_mask]).backward()
             else: # with Aug
                 train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
+                neighbor_dist_list.to(device)
                 if epoch > args.warmup:
                     # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
                     prev_out_local = prev_out[train_idx]
