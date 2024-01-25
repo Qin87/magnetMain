@@ -609,8 +609,8 @@ def neighbor_sampling_BiEdge_bidegree(total_node, edge_index, sampling_src_idx,
     row_aug_degree = torch.min(row_aug_degree, row_degree[sampling_src_idx])
 
     # Sample neighbors
-    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree)
-    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree)
+    col_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, col_max_degree).to(device)     # Ben for GPU
+    row_new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, row_max_degree).to(device)     #
     # print("hhh", mixed_neighbor_dist, 'eewe', col_new_tgt)
     col_tgt_index = torch.arange(col_max_degree).unsqueeze(dim=0).to(device)
     row_tgt_index = torch.arange(row_max_degree).unsqueeze(dim=0).to(device)
