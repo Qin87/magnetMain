@@ -415,6 +415,8 @@ def neighbor_sampling_bidegree_variant1(total_node, edge_index, sampling_src_idx
     sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
 
     # Find the nearest nodes and mix target pool
+    print(neighbor_dist_list.device)
+    neighbor_dist_list = neighbor_dist_list.to(device)      # Ben for GPU
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
     # print(neighbor_dist_list)
 
