@@ -23,7 +23,7 @@ warnings.filterwarnings("ignore")
 # internal files
 from gens_GraphSHA import sampling_idx_individual_dst, sampling_node_source, neighbor_sampling, \
     neighbor_sampling_BiEdge, neighbor_sampling_BiEdge_bidegree, neighbor_sampling_bidegreeOrigin, \
-    neighbor_sampling_bidegree_variant1, neighbor_sampling_bidegree_variant2
+    neighbor_sampling_bidegree_variant1, neighbor_sampling_bidegree_variant2, neighbor_sampling_reverse
 # from layer.DiGCN import *
 from ArgsBen import parse_args
 from utils.data_utils import make_longtailed_data_remove, get_idx_info, CrossEntropy, keep_all_data, \
@@ -186,7 +186,7 @@ def main(args):
     try:
         print(model)  # # StandGCN2((conv1): GCNConv(3703, 64)  (conv2): GCNConv(64, 6))
     except:
-        pass
+        print("print model failed")
     model.to(device)
 
     for split in range(splits):
