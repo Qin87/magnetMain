@@ -859,7 +859,9 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     # Sorting src idx with corresponding dst idx
     # the first is ascending ordered new tensor, the second is the original index
     sampling_src_idx, sorted_idx = torch.sort(sampling_src_idx)
-    # sorted_idx = sorted_idx.cpu()       # Ben in case for GPU
+    sampling_src_idx = sampling_src_idx.to(device)
+    sorted_idx = sorted_idx.to(sampling_dst_idx.device)      # Ben in case for GPU
+    print(sampling_dst_idx.device)
     sampling_dst_idx = sampling_dst_idx[sorted_idx]
     # print(sampling_src_idx, sampling_dst_idx)
 
