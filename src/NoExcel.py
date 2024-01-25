@@ -306,6 +306,10 @@ def main(args):
                     if args.AugDirect == 1:
                         new_edge_index = neighbor_sampling(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx,
                                                            neighbor_dist_list)
+                    elif args.AugDirect == -1:
+                        new_edge_index = neighbor_sampling_reverse(data_x.size(0), edges[:, train_edge_mask],
+                                                                   sampling_src_idx,
+                                                                   neighbor_dist_list)
                     elif args.AugDirect == 2:
                         new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
                                                                   sampling_src_idx, neighbor_dist_list)
@@ -327,7 +331,7 @@ def main(args):
                                                                              sampling_src_idx, neighbor_dist_list)
 
                     else:
-                        pass
+                        raise NotImplementedError("Not Listed Aug Type")
                     beta = torch.distributions.beta.Beta(1, 100)
                     lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
                     new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
@@ -359,11 +363,11 @@ def main(args):
                     # print("edge_weight", new_edge_weight.shape, data.y.shape)
                     del edge_index1, edge_weights1
 
-                else:
+                else:  # within warm up
                     # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU, must here insert this
                     sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
-                    sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
-                    sampling_dst_idx = sampling_dst_idx.cpu()
+                    # sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
+                    # sampling_dst_idx = sampling_dst_idx.cpu()
                     beta = torch.distributions.beta.Beta(2, 2)
                     lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
                     sampling_src_idx = sampling_src_idx.to(device)      # Ben for GPU

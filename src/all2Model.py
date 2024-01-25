@@ -116,6 +116,32 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
             lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
             new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
 
+            add_num = new_x.shape[0] - data_x.shape[0]  # Ben
+            new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+            new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
+            new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+            # new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0).cpu()  # for GPU
+            data_y = data_y.to(device)
+            _new_y = data_y[sampling_src_idx.long()].clone()
+            new_y = torch.cat((data_y, _new_y), dim=0)  #
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
+                                                               new_y.size(-1), new_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),
+                                                                     new_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                new_SparseEdges = (edge_index1, edge_index2)
+                new_edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                new_SparseEdges = edge_index1
+                new_edge_weight = edge_weights1
+            # print("edge_weight", new_edge_weight.shape, data.y.shape)
+            del edge_index1, edge_weights1
+
         else:
             sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
             beta = torch.distributions.beta.Beta(2, 2)
@@ -125,6 +151,29 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
             # new_edge_index = duplicate_neighbor(data_x.size(0), data.edge_index, sampling_src_idx)
             new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
 
+            add_num = len(sampling_src_idx)  # Ben
+            new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+            new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
+            new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+            # sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
+            data_y = data_y.to(device)
+            _new_y = data_y[sampling_src_idx].clone()
+            new_y = torch.cat((data_y, _new_y), dim=0)  #
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
+                                                               new_y.size(-1), new_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1), new_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                new_SparseEdges = (edge_index1, edge_index2)
+                new_edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                new_SparseEdges = edge_index1
+                new_edge_weight = edge_weights1
+            del edge_index1, edge_weights1
 
 
         sampling_src_idx = sampling_src_idx.to(torch.long).to(data_y.device)  # Ben for GPU error
@@ -190,7 +239,7 @@ def train(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data
             out = model(new_x, Sym_edges)   # all data + aug
         prev_out = (out[:data_x.size(0)]).detach().clone()
         add_num = out.shape[0] - data_train_mask.shape[0]
-        new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data.x.device)
+        new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
         new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
         
         criterion(out[new_train_mask], new_y).backward()
@@ -464,8 +513,6 @@ def Uni_VarData():
 
         class_num_list = [len(item) for item in train_node]
         idx_info = [torch.tensor(item) for item in train_node]
-    elif dataset == 'Amazon-Photo':
-        pass
     else:
         edges = data.edge_index  # for torch_geometric librar
         data_y = data.y
@@ -699,14 +746,14 @@ for split in range(splits):
     idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
                       idx_info_list]  # train nodes position inside train
 
-    if args.gdc=='ppr':
-        # neighbor_dist_list = get_PPR_adj(data.x, data.edge_index[:,train_edge_mask], alpha=0.05, k=128, eps=None)
-        neighbor_dist_list = get_PPR_adj(data_x, edges[:,train_edge_mask], alpha=0.05, k=128, eps=None)
-    elif args.gdc=='hk':
-        # neighbor_dist_list = get_heat_adj(data.x, data.edge_index[:,train_edge_mask], t=5.0, k=None, eps=0.0001)
-        neighbor_dist_list = get_heat_adj(data.x, data.edge_index[:,train_edge_mask], t=5.0, k=None, eps=0.0001)
-    elif args.gdc=='none':
-        neighbor_dist_list = get_ins_neighbor_dist(data.y.size(0), data.edge_index[:,train_edge_mask], data_train_mask, device)
+    train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
+    if args.gdc == 'ppr':
+        neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
+    elif args.gdc == 'hk':
+        neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
+    elif args.gdc == 'none':
+        neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
+                                                   device)
 
     best_val_acc_f1 = 0
     saliency, prev_out = None, None
