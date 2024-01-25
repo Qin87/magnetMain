@@ -61,16 +61,16 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
     # tensor([[   0,    0,    0,  ..., 2707, 2707, 2707],[ 633, 1862, 2582,  ...,  598, 1473, 2706]])
 
     # Assign node index for augmented nodes
-    row, col = edge_index[0], edge_index[1]
+    row, col = edge_index[0].to(device), edge_index[1].to(device)
     # print("original row is ", row[:10])
     row, sort_idx = torch.sort(row)  #
     # print("original col is ", col[:10])
     # print("new row is ", row[:10])
-    col = col[sort_idx]
+    col = col[sort_idx].to(device)
     # print(row.shape, edge_index.shape)
-    Row_degree = scatter_add(torch.ones_like(row), row)  # torch.Size([51]) torch.Size([2, 51])
-    Col_degree = scatter_add(torch.ones_like(col), col)  # Ben
-    sampling_src_idx = sampling_src_idx.cpu()       # Ben for GPU
+    Row_degree = scatter_add(torch.ones_like(row), row).to(device)  # torch.Size([51]) torch.Size([2, 51])
+    Col_degree = scatter_add(torch.ones_like(col), col).to(device)  # Ben
+    # sampling_src_idx = sampling_src_idx.cpu()       # Ben for GPU
     for i in [Row_degree, Col_degree]:
         if i.shape[0] < total_node:
             num_zeros = total_node - len(i)
@@ -82,25 +82,25 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
     col_new_col = (torch.arange(len(sampling_src_idx)).to(device) + total_node).repeat_interleave(
         Col_degree[sampling_src_idx])
     temp = scatter_add(torch.ones_like(sampling_src_idx), sampling_src_idx).to(device)  # Row_degree of anchor nodes
-    node_mask = torch.zeros(total_node, dtype=torch.bool)
+    node_mask = torch.zeros(total_node, dtype=torch.bool).to(device)
     if torch.cuda.is_available():
         node_mask = node_mask.cuda()
     unique_src = torch.unique(sampling_src_idx)
     node_mask[unique_src] = True  # get the torch where anchor nodes position are True
 
-    row = row.cpu()
-    col = col.cpu()
-    row_mask = node_mask[row].cpu()  # select node in row, row_mask is bool. is Anchor node or not
-    col_mask = node_mask[col].cpu()
-    edge_mask = col[row_mask]  # anchor nodes' edge
-    Newedge_mask = row[col_mask]
+    # row = row.cpu()
+    # col = col.cpu()
+    row_mask = node_mask[row].to(device)  # select node in row, row_mask is bool. is Anchor node or not
+    col_mask = node_mask[col].to(device)
+    edge_mask = col[row_mask].to(device)  # anchor nodes' edge
+    Newedge_mask = row[col_mask].to(device)
     # print("row_mask is", row_mask[:20], np.shape(row_mask))  # torch.Size([7798])
     # print("col is ", col[:20], np.shape(col))  # torch.Size([7798])
     # print("edge_mask is ", edge_mask, edge_mask.shape)  # torch.Size([14])
     # print("new edge_mask is ", Newedge_mask, Newedge_mask.shape)  # torch.Size([9])
 
     b_idx = torch.arange(len(unique_src)).to(device).repeat_interleave(
-        Row_degree[unique_src])  # anchor nodes' Row_degree
+        Row_degree[unique_src]).to(device)  # anchor nodes' Row_degree
     # print(b_idx[:10], np.shape(b_idx))  # tensor([0, 0, 1, 1, 1, 1, 2, 2, 2, 2]) torch.Size([1380])
 
     edge_mask = edge_mask.to(device)        # Ben for GPU
@@ -123,10 +123,10 @@ def duplicate_neighbor(total_node, edge_index, sampling_src_idx):
         cut_temp = temp[temp != 0]
 
     # print("Hi1, ", edge_dense[:10], np.shape(edge_dense))  # torch.Size([240, 29])
-    edge_dense = edge_dense.repeat_interleave(cut_temp, dim=0)
+    edge_dense = edge_dense.repeat_interleave(cut_temp, dim=0).to(device)
     row_new_col = edge_dense[edge_dense != -1]
     # print(row_new_col, np.shape(row_new_col))   # tensor([ 723, 2614,  723,  ...,  463,   22, 1906]) torch.Size([15790])
-    inv_edge_index_row = torch.stack([row_new_col, row_new_row], dim=0)
+    inv_edge_index_row = torch.stack([row_new_col, row_new_row], dim=0).to(device)
 
     new_edge_index = torch.cat([edge_index, inv_edge_index_row], dim=1)  # original 7798 edges,
 
@@ -153,7 +153,8 @@ def neighbor_sampling_reverse(total_node, edge_index, sampling_src_idx,
     sampling_src_idx = sampling_src_idx.clone().to(device)
 
     # Find the nearest nodes and mix target pool
-    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+    neighbor_dist_list = neighbor_dist_list.to(device)  # Ben for GPU
+    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx].to(device)
 
     # Compute degree
     col = edge_index[1]
@@ -161,24 +162,24 @@ def neighbor_sampling_reverse(total_node, edge_index, sampling_src_idx,
     if len(degree) < total_node:
         degree = torch.cat([degree, degree.new_zeros(total_node - len(degree))], dim=0)
     if train_node_mask is None:
-        train_node_mask = torch.ones_like(degree, dtype=torch.bool)
+        train_node_mask = torch.ones_like(degree, dtype=torch.bool).to(device)
     degree_dist = scatter_add(torch.ones_like(degree[train_node_mask]), degree[train_node_mask]).to(device).type(
         torch.float32)
 
     # Sample degree for augmented nodes
-    prob = degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1)
+    prob = degree_dist.unsqueeze(dim=0).repeat(len(sampling_src_idx), 1).to(device)
     aug_degree = torch.multinomial(prob, 1).to(device).squeeze(dim=1)  # (m)
     max_degree = degree.max().item() + 1
-    aug_degree = torch.min(aug_degree, degree[sampling_src_idx])
+    aug_degree = torch.min(aug_degree, degree[sampling_src_idx]).to(device)
 
     # Sample neighbors
-    new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, max_degree)
+    new_tgt = torch.multinomial(mixed_neighbor_dist + 1e-12, max_degree).to(device)
     tgt_index = torch.arange(max_degree).unsqueeze(dim=0).to(device)
     new_col = new_tgt[(tgt_index - aug_degree.unsqueeze(dim=1) < 0)]
-    new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node)
-    new_row = new_row.repeat_interleave(aug_degree)
+    new_row = (torch.arange(len(sampling_src_idx)).to(device) + total_node).to(device)
+    new_row = new_row.repeat_interleave(aug_degree).to(device)
     # inv_edge_index = torch.stack([new_col, new_row], dim=0)
-    inv_edge_index = torch.stack([new_row, new_col], dim=0)
+    inv_edge_index = torch.stack([new_row, new_col], dim=0).to(device)
     new_edge_index = torch.cat([edge_index, inv_edge_index], dim=1)
 
     return new_edge_index
@@ -207,6 +208,7 @@ def neighbor_sampling_BiEdge(total_node, edge_index, sampling_src_idx,
 
     # Find the nearest nodes and mix target pool
     # mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
+    neighbor_dist_list = neighbor_dist_list.to(device)  # Ben for GPU
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx.long()]
 
     # Compute degree
@@ -262,6 +264,7 @@ def neighbor_sampling_bidegreeOrigin(total_node, edge_index, sampling_src_idx,
     sampling_src_idx = torch.tensor(sampling_src_idx, dtype=torch.long)
 
     # Find the nearest nodes and mix target pool
+    neighbor_dist_list = neighbor_dist_list.to(device)      # Ben for GPU
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
     # print(neighbor_dist_list)
 
@@ -339,6 +342,7 @@ def neighbor_sampling_bidegree(total_node, edge_index, sampling_src_idx,
     sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
 
     # Find the nearest nodes and mix target pool
+    neighbor_dist_list = neighbor_dist_list.to(device)
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
     # print(neighbor_dist_list)
 
@@ -493,6 +497,7 @@ def neighbor_sampling_bidegree_variant2(total_node, edge_index, sampling_src_idx
     sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
 
     # Find the nearest nodes and mix target pool
+    neighbor_dist_list = neighbor_dist_list.to(device)  # Ben for GPU
     mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]
     # print(neighbor_dist_list)
 
@@ -569,6 +574,7 @@ def neighbor_sampling_BiEdge_bidegree(total_node, edge_index, sampling_src_idx,
     sampling_src_idx = sampling_src_idx.clone().to(device).to(torch.long)
 
     # Find the nearest nodes and mix target pool
+    neighbor_dist_list = neighbor_dist_list.to(device)  # Ben for GPU
     sampling_src_idx = torch.tensor(sampling_src_idx, dtype=torch.long)  # Adjust dtype as needed
     # print(neighbor_dist_list.device, sampling_src_idx.device)   # cpu cuda:1
     sampling_src_idx = sampling_src_idx.to(neighbor_dist_list.device)  # Ben for GPU
@@ -653,6 +659,7 @@ def neighbor_sampling(total_node, edge_index, sampling_src_idx,
     # Find the nearest nodes and mix target pool
     sampling_src_idx = sampling_src_idx.long()
     # print("wy,,,", sampling_src_idx)
+    neighbor_dist_list = neighbor_dist_list.to(device)  # Ben for GPU
     try:
         mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx]   # tensors used as indices must be long, byte or bool tensors
     except:
@@ -828,7 +835,8 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     sampling_dst_idx = torch.cat(sampling_dst_idx)
     # Sample indices for src
     src_idx = torch.multinomial(prob, sampling_dst_idx.shape[0], True)
-    src_idx = src_idx.cpu()     # not on the same GPU, weird. Ben
+    # src_idx = src_idx.cpu()     # not on the same GPU, weird. Ben
+    src_idx = src_idx.to(temp_idx_info.device)
     sampling_src_idx = temp_idx_info[src_idx]
     # print("\nChatGPT samp_src_idx", sampling_src_idx.shape)
 
@@ -838,19 +846,20 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     # print("\noriginal samp_src_idx", sampling_src_idx.shape)
     prob = torch.log(new_class_num_list.float()) / new_class_num_list.float()   # why use this as prob?
     prob = prob.repeat_interleave(new_class_num_list.long())
-    temp_idx_info = torch.cat(idx_info)
-    if torch.cuda.is_available():       # Ben for GPU
-        temp_idx_info = temp_idx_info.cuda()
-    else:
-        pass
+    temp_idx_info = torch.cat(idx_info).to(device)
+
+    # if torch.cuda.is_available():       # Ben for GPU
+    #     temp_idx_info = temp_idx_info.cuda()
+    # else:
+    #     pass
     dst_idx = torch.multinomial(prob, sampling_src_idx.shape[0], True)
     dst_idx = dst_idx.cpu()  # not on the same GPU, weird. Ben
-    sampling_dst_idx = temp_idx_info[dst_idx]
+    sampling_dst_idx = temp_idx_info[dst_idx].to(device)
 
     # Sorting src idx with corresponding dst idx
     # the first is ascending ordered new tensor, the second is the original index
     sampling_src_idx, sorted_idx = torch.sort(sampling_src_idx)
-    sorted_idx = sorted_idx.cpu()       # Ben in case for GPU
+    # sorted_idx = sorted_idx.cpu()       # Ben in case for GPU
     sampling_dst_idx = sampling_dst_idx[sorted_idx]
     # print(sampling_src_idx, sampling_dst_idx)
 
