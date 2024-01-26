@@ -1,6 +1,6 @@
 # external files
 import os
-from random import random
+import random
 
 import openpyxl
 import pandas as pd
@@ -11,7 +11,7 @@ import time
 from openpyxl.reader.excel import load_workbook
 from sklearn.metrics import balanced_accuracy_score, f1_score
 import warnings
-import tqdm
+from tqdm import tqdm
 
 from layer.DGCN import SymModel
 from layer.DiGCN import DiModel, DiGCN_IB
@@ -333,7 +333,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
     scheduler.step(val_loss)
     return num_features
 
-def Uni_VarData():
+def Uni_VarData(args):
     if args.IsDirectedData:
         dataset = load_directedData(args)
     else:
