@@ -179,15 +179,17 @@ def main(args):
         best_val_acc_f1 = 0
         saliency, prev_out = None, None
 
-        CountNotImproved = 0
+        # CountNotImproved = 0
+        # if CountNotImproved > 50:
+        #     opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
+        # else:
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
+        # opt = torch.optim.Adam(
+        #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
+        #     lr=args.lr)  # from SHA
         for epoch in tqdm.tqdm(range(args.epoch)):
-            if CountNotImproved > 50:
-                opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
-            else:
-                opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
-            # opt = torch.optim.Adam(
-            #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
-            #     lr=args.lr)  # from SHA
+
+
             scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
                                                                    verbose=False)
             model.train()
@@ -397,7 +399,7 @@ def main(args):
             opt.step()
             scheduler.step(val_loss)
             # from graphSHA
-            --------------------------
+            # --------------------------
             model.eval()
             if args.method_name == 'SymDiGCN':
                 logits = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
@@ -418,7 +420,7 @@ def main(args):
                 accs.append(acc_epoch)
                 baccs.append(bacc)
                 f1s.append(f1)
-                ---------------------
+                # ---------------------
             train_accSHA, val_accSHA, tmp_test_acc = accs
             train_f1, val_f1, tmp_test_f1 = f1s
             val_acc_f1 = (val_accSHA + val_f1) / 2.
@@ -427,8 +429,8 @@ def main(args):
                 test_accSHA = accs[2]
                 test_bacc = baccs[2]
                 test_f1 = f1s[2]
-            else:
-                CountNotImproved += 1
+            # else:
+            #     CountNotImproved += 1
 
         if args.IsDirectedData:
             dataset_to_print = args.Direct_dataset
