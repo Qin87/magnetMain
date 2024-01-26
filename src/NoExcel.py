@@ -226,7 +226,7 @@ def main(args):
                     out = model(data_x, edges)
                 criterion(out[data_train_mask], data_y[data_train_mask]).backward()
             else: # with Aug
-                train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
+                # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
                 neighbor_dist_list.to(device)
                 if epoch > args.warmup:
                     # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
@@ -330,72 +330,205 @@ def main(args):
                         new_SparseEdges = edge_index1
                         new_edge_weight = edge_weights1
                     del edge_index1, edge_weights1
+           # ----------------------------------------------------------------------------
+                sampling_src_idx = sampling_src_idx.to(torch.long).to(data_y.device)  # Ben for GPU error
+                _new_y = data_y[sampling_src_idx].clone()
+                new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
+
+                Sym_edges = torch.cat([edges, new_edge_index], dim=1)
+                Sym_edges = torch.unique(Sym_edges, dim=1)
+                Sym_new_y = torch.cat((data_y, _new_y), dim=0)
                 if args.method_name == 'SymDiGCN':
-                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
-                                                                                         data_y.size(-1),
-                                                                                         data.edge_weight)
+                    # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),
+                    #                                                                      data.edge_weight)
+
+                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),
+                                                                                         data.edge_weight)  # all edge and all y, not only train
+
+                    # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(new_edge_index, new_y.size(-1),data.edge_weight)
+
+                elif args.method_name == 'APPNP' or 'DiG':
+                    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1),
+                                                                       new_x.dtype)
+                    edge_index1 = edge_index1.to(device)
+                    edge_weights1 = edge_weights1.to(device)
+                    if args.method_name[-2:] == 'ib':
+                        edge_index2, edge_weights2 = get_second_directed_adj(Sym_edges.long(), Sym_new_y.size(-1),
+                                                                             new_x.dtype)
+                        edge_index2 = edge_index2.to(device)
+                        edge_weights2 = edge_weights2.to(device)
+                        new_SparseEdges = (edge_index1, edge_index2)
+                        edge_weight = (edge_weights1, edge_weights2)
+                        del edge_index2, edge_weights2
+                    else:
+                        new_SparseEdges = edge_index1
+                        edge_weight = edge_weights1
+                    del edge_index1, edge_weights1
+                else:
+                    pass
+
+                if args.method_name == 'SymDiGCN':
+
                     try:
-                        out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
-                    except:     # for GPU
+                        # out = model(new_x, new_edge_index, edge_in, in_weight, edge_out, out_weight)
+                        out = model(new_x, Sym_edges, edge_in, in_weight, edge_out,
+                                    out_weight)  # all edges(aug+all edges)
+                    except:
                         model.to('cpu')
                         new_x = new_x.to('cpu')
-                        data.edge_index = data.edge_index.to('cpu')
+                        Sym_edges = Sym_edges.to('cpu')
                         edge_in = edge_in.to('cpu')
-                        in_weight = in_weight.to('cpu')
                         edge_out = edge_out.to('cpu')
+                        in_weight = in_weight.to('cpu')
                         out_weight = out_weight.to('cpu')
-                        out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
-                        # new_x = new_x.to(device)
-                        # data.edge_index = data.edge_index.to(device)
-                        # edge_in = edge_in.to(device)
-                        # in_weight = in_weight.to(device)
-                        # edge_out = edge_out.to(device)
-                        # out_weight = out_weight.to(device)
-                elif args.method_name == 'DiG':
-                    try:
-                        out = model(new_x, new_SparseEdges, new_edge_weight)  #
-                    except RuntimeError:
-                        model.to('cpu')
-                        new_x = new_x.to('cpu')
-                        new_SparseEdges = new_SparseEdges.to('cpu')
-                        new_edge_weight = new_edge_weight.to('cpu')
-                        out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                        out = model(new_x, Sym_edges, edge_in, in_weight, edge_out, out_weight)
                         model.to(device)
                         new_x = new_x.to(device)
-                        new_SparseEdges = new_SparseEdges.to(device)
-                        new_edge_weight = new_edge_weight.to(device)
-                else:
-                    try:
-                        out = model(new_x, new_edge_index)
-                    except TypeError:
-                        out= model(new_x)
-                try:
-                    prev_out = (out[:data_x.size(0)]).clone().to(device)
-                except:
-                    data_x = data_x.cpu()
-                    prev_out = (out[:data_x.size(0)]).clone().to(device)
-                _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
-                new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
-                out = out.to(device)
-                new_y = new_y.to(out.device)
-                new_train_mask = new_train_mask.to(out.device)  # Ben for GPU
-                # print("out.device", out.device)
-                criterion(out[new_train_mask], new_y).backward()
+                        Sym_edges = Sym_edges.to(device)
+                        edge_in = edge_in.to(device)
+                        edge_out = edge_out.to(device)
+                        in_weight = in_weight.to(device)
+                        out_weight = out_weight.to(device)
 
+
+                elif args.method_name == 'DiG':
+                    out = model(new_x, new_SparseEdges, edge_weight)  # all data+ aug
+                else:
+                    # out = model(new_x, new_edge_index)   # all train data + aug
+                    out = model(new_x, Sym_edges)  # all data + aug
+                prev_out = (out[:data_x.size(0)]).detach().clone()
+                add_num = out.shape[0] - data_train_mask.shape[0]
+                new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+                data_train_mask = data_train_mask.to(new_train_mask.device)
+                new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
+
+                criterion(out[new_train_mask], new_y).backward()
+                # ____________________________________________________________________
+
+
+
+
+
+
+                # if args.method_name == 'SymDiGCN':
+                #     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                #                                                                          data_y.size(-1),
+                #                                                                          data.edge_weight)
+                #     try:
+                #         out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                #     except:     # for GPU
+                #         model.to('cpu')
+                #         new_x = new_x.to('cpu')
+                #         data.edge_index = data.edge_index.to('cpu')
+                #         edge_in = edge_in.to('cpu')
+                #         in_weight = in_weight.to('cpu')
+                #         edge_out = edge_out.to('cpu')
+                #         out_weight = out_weight.to('cpu')
+                #         out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                #         # new_x = new_x.to(device)
+                #         # data.edge_index = data.edge_index.to(device)
+                #         # edge_in = edge_in.to(device)
+                #         # in_weight = in_weight.to(device)
+                #         # edge_out = edge_out.to(device)
+                #         # out_weight = out_weight.to(device)
+                # elif args.method_name == 'DiG':
+                #     try:
+                #         out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                #     except RuntimeError:
+                #         model.to('cpu')
+                #         new_x = new_x.to('cpu')
+                #         new_SparseEdges = new_SparseEdges.to('cpu')
+                #         new_edge_weight = new_edge_weight.to('cpu')
+                #         out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                #         model.to(device)
+                #         new_x = new_x.to(device)
+                #         new_SparseEdges = new_SparseEdges.to(device)
+                #         new_edge_weight = new_edge_weight.to(device)
+                # else:
+                #     try:
+                #         out = model(new_x, new_edge_index)
+                #     except TypeError:
+                #         out= model(new_x)
+                # try:
+                #     prev_out = (out[:data_x.size(0)]).clone().to(device)
+                # except:
+                #     data_x = data_x.cpu()
+                #     prev_out = (out[:data_x.size(0)]).clone().to(device)
+                # _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
+                # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
+                # out = out.to(device)
+                # new_y = new_y.to(out.device)
+                # new_train_mask = new_train_mask.to(out.device)  # Ben for GPU
+                # # print("out.device", out.device)
+                # criterion(out[new_train_mask], new_y).backward()
+#_____________________________________________________________###################
 
             torch.cuda.empty_cache()
-
-            with torch.no_grad():
+#########--------------------------------------------------------------
+            # with torch.no_grad():
+            #     model.eval()
+            #     if args.method_name == 'SymDiGCN':
+            #
+            #         out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
+            #     elif args.method_name == 'DiG':
+            #         out = model(data_x, SparseEdges, edge_weight)
+            #     else:
+            #         out = model(data_x, edges[:, train_edge_mask])
+            #
+            #     val_loss = F.cross_entropy(out[data_val_mask], data_y[data_val_mask])
+            # opt.step()
+            # scheduler.step(val_loss)
+      # ----------------------------------------###############################
+            with torch.no_grad():  # only original data in validation, no augmented data
                 model.eval()
                 if args.method_name == 'SymDiGCN':
+                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),
+                                                                                         data.edge_weight)  # all original data, no augmented data
+                    try:
+                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                    except:
+                        model.to('cpu')
+                        data_x = data_x.to('cpu')
+                        edges = edges.to('cpu')
+                        edge_in = edge_in.to('cpu')
+                        edge_out = edge_out.to('cpu')
+                        in_weight = in_weight.to('cpu')
+                        out_weight = out_weight.to('cpu')
+                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                        model.to(device)
+                        data_x = data_x.to(device)
+                        edges = edges.to(device)
+                        edge_in = edge_in.to(device)
+                        edge_out = edge_out.to(device)
+                        in_weight = in_weight.to(device)
+                        out_weight = out_weight.to(device)
 
-                    out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
                 elif args.method_name == 'DiG':
+
+                    # must keep this, don't know why, but will be error without it----to analysis it later
+                    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1),
+                                                                       data_x.dtype)
+                    edge_index1 = edge_index1.to(device)
+                    edge_weights1 = edge_weights1.to(device)
+                    if args.method_name[-2:] == 'ib':
+                        edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1),
+                                                                             data_x.dtype)
+                        edge_index2 = edge_index2.to(device)
+                        edge_weights2 = edge_weights2.to(device)
+                        SparseEdges = (edge_index1, edge_index2)
+                        edge_weight = (edge_weights1, edge_weights2)
+                        del edge_index2, edge_weights2
+                    else:
+                        SparseEdges = edge_index1
+                        edge_weight = edge_weights1
+                    del edge_index1, edge_weights1
+
                     out = model(data_x, SparseEdges, edge_weight)
                 else:
-                    out = model(data_x, edges[:, train_edge_mask])
-
-                val_loss = F.cross_entropy(out[data_val_mask], data_y[data_val_mask])
+                    # out = model(data_x, edges[:, train_edge_mask])
+                    out = model(data_x, edges)
+                # out = model(data.x, data.edge_index[:, train_edge_mask])
+                val_loss = F.cross_entropy(out[data_val_mask], data.y[data_val_mask])
             opt.step()
             scheduler.step(val_loss)
             # from graphSHA
