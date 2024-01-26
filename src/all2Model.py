@@ -88,6 +88,9 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
 
     if args.AugDirect == 0:
         if args.method_name == 'SymDiGCN':
+            data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                                                                                 data_y.size(-1),
+                                                                                 data.edge_weight)
             try:
                 out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
             except:
