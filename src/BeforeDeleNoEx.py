@@ -179,10 +179,19 @@ def main(args):
         best_val_acc_f1 = 0
         saliency, prev_out = None, None
 
+        # CountNotImproved = 0
+        # if CountNotImproved > 50:
+        #     opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
+        # else:
         opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
-                                                               verbose=False)
+        # opt = torch.optim.Adam(
+        #     [dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0), ],
+        #     lr=args.lr)  # from SHA
         for epoch in tqdm.tqdm(range(args.epoch)):
+
+
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
+                                                                   verbose=False)
             model.train()
             model.to(device)
             opt.zero_grad()  # clear the gradients of the model's parameters.
@@ -330,8 +339,14 @@ def main(args):
                 Sym_edges = torch.unique(Sym_edges, dim=1)
                 Sym_new_y = torch.cat((data_y, _new_y), dim=0)
                 if args.method_name == 'SymDiGCN':
+                    # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),
+                    #                                                                      data.edge_weight)
+
                     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),
                                                                                          data.edge_weight)  # all edge and all y, not only train
+
+                    # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(new_edge_index, new_y.size(-1),data.edge_weight)
+
                 elif args.method_name == 'APPNP' or 'DiG':
                     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1),
                                                                        new_x.dtype)
@@ -353,7 +368,9 @@ def main(args):
                     pass
 
                 if args.method_name == 'SymDiGCN':
+
                     try:
+                        # out = model(new_x, new_edge_index, edge_in, in_weight, edge_out, out_weight)
                         out = model(new_x, Sym_edges, edge_in, in_weight, edge_out,
                                     out_weight)  # all edges(aug+all edges)
                     except:
@@ -377,6 +394,7 @@ def main(args):
                 elif args.method_name == 'DiG':
                     out = model(new_x, new_SparseEdges, edge_weight)  # all data+ aug
                 else:
+                    # out = model(new_x, new_edge_index)   # all train data + aug
                     out = model(new_x, Sym_edges)  # all data + aug
                 prev_out = (out[:data_x.size(0)]).detach().clone()
                 add_num = out.shape[0] - data_train_mask.shape[0]
@@ -385,7 +403,82 @@ def main(args):
                 new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
 
                 criterion(out[new_train_mask], new_y).backward()
+                # ____________________________________________________________________
+
+
+
+
+
+
+                # if args.method_name == 'SymDiGCN':
+                #     data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                #                                                                          data_y.size(-1),
+                #                                                                          data.edge_weight)
+                #     try:
+                #         out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                #     except:     # for GPU
+                #         model.to('cpu')
+                #         new_x = new_x.to('cpu')
+                #         data.edge_index = data.edge_index.to('cpu')
+                #         edge_in = edge_in.to('cpu')
+                #         in_weight = in_weight.to('cpu')
+                #         edge_out = edge_out.to('cpu')
+                #         out_weight = out_weight.to('cpu')
+                #         out = model(new_x, data.edge_index, edge_in, in_weight, edge_out, out_weight)
+                #         # new_x = new_x.to(device)
+                #         # data.edge_index = data.edge_index.to(device)
+                #         # edge_in = edge_in.to(device)
+                #         # in_weight = in_weight.to(device)
+                #         # edge_out = edge_out.to(device)
+                #         # out_weight = out_weight.to(device)
+                # elif args.method_name == 'DiG':
+                #     try:
+                #         out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                #     except RuntimeError:
+                #         model.to('cpu')
+                #         new_x = new_x.to('cpu')
+                #         new_SparseEdges = new_SparseEdges.to('cpu')
+                #         new_edge_weight = new_edge_weight.to('cpu')
+                #         out = model(new_x, new_SparseEdges, new_edge_weight)  #
+                #         model.to(device)
+                #         new_x = new_x.to(device)
+                #         new_SparseEdges = new_SparseEdges.to(device)
+                #         new_edge_weight = new_edge_weight.to(device)
+                # else:
+                #     try:
+                #         out = model(new_x, new_edge_index)
+                #     except TypeError:
+                #         out= model(new_x)
+                # try:
+                #     prev_out = (out[:data_x.size(0)]).clone().to(device)
+                # except:
+                #     data_x = data_x.cpu()
+                #     prev_out = (out[:data_x.size(0)]).clone().to(device)
+                # _new_y = data_y[sampling_src_idx.long()].clone()    # AttributeError: 'tuple' object has no attribute 'detach'
+                # new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
+                # out = out.to(device)
+                # new_y = new_y.to(out.device)
+                # new_train_mask = new_train_mask.to(out.device)  # Ben for GPU
+                # # print("out.device", out.device)
+                # criterion(out[new_train_mask], new_y).backward()
+#_____________________________________________________________###################
+
             torch.cuda.empty_cache()
+#########--------------------------------------------------------------
+            # with torch.no_grad():
+            #     model.eval()
+            #     if args.method_name == 'SymDiGCN':
+            #
+            #         out = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
+            #     elif args.method_name == 'DiG':
+            #         out = model(data_x, SparseEdges, edge_weight)
+            #     else:
+            #         out = model(data_x, edges[:, train_edge_mask])
+            #
+            #     val_loss = F.cross_entropy(out[data_val_mask], data_y[data_val_mask])
+            # opt.step()
+            # scheduler.step(val_loss)
+      # ----------------------------------------###############################
             with torch.no_grad():  # only original data in validation, no augmented data
                 model.eval()
                 if args.method_name == 'SymDiGCN':
@@ -411,6 +504,7 @@ def main(args):
                         out_weight = out_weight.to(device)
 
                 elif args.method_name == 'DiG':
+
                     # must keep this, don't know why, but will be error without it----to analysis it later
                     edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1),
                                                                        data_x.dtype)
@@ -468,6 +562,8 @@ def main(args):
                 test_accSHA = accs[2]
                 test_bacc = baccs[2]
                 test_f1 = f1s[2]
+            # else:
+            #     CountNotImproved += 1
 
         if args.IsDirectedData:
             dataset_to_print = args.Direct_dataset
@@ -500,6 +596,9 @@ def Uni_VarData(args):
         data.edge_weight = torch.FloatTensor(data.edge_weight)
     except:
         data.edge_weight = None
+
+    # if args.to_undirected:
+    #     data.edge_index = to_undirected(data.edge_index)
 
     # copy GraphSHA
     if args.IsDirectedData and args.Direct_dataset.split('/')[0].startswith('dgl'):
