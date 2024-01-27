@@ -395,9 +395,6 @@ def Uni_VarData(args):
     print("data_x", data_x.shape)  # [11701, 300])
 
     data_y = data_y.long()
-    # n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
-    # n_cls = torch.tensor(n_cls).to(device)
-    # print("Number of classes: ", n_cls)
 
     return data, data_x, data_y, edges, dataset_num_features,data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight
 
@@ -445,15 +442,8 @@ if __name__ == "__main__":
 
     data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight = Uni_VarData(
         args)
-    criterion = CrossEntropy().to(device)
 
-    try:
-        splits = data_train_maskOrigin.shape[1]
-        print("splits", splits)
-        if len(data_test_maskOrigin.shape) == 1:
-            data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
-    except IndexError:
-        splits = 1
+
 
     if args.method_name == 'APPNP' or 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
@@ -483,10 +473,18 @@ if __name__ == "__main__":
     print("Number of classes: ", n_cls)
 
     model = CreatModel(num_features, n_cls, data_x)
+    model = model.to(device)
+    criterion = CrossEntropy().to(device)
     opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
                                                            verbose=False)
-
+    try:
+        splits = data_train_maskOrigin.shape[1]
+        print("splits", splits)
+        if len(data_test_maskOrigin.shape) == 1:
+            data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
+    except IndexError:
+        splits = 1
     for split in range(splits):
         print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
@@ -502,7 +500,11 @@ if __name__ == "__main__":
                 print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
                 data_train_mask, data_val_mask = (
                 data_train_maskOrigin[:, split].clone(), data_val_maskOrigin[:, split].clone())
-                data_test_mask = data_test_maskOrigin[:, 1].clone()
+                try:
+                    data_test_mask = data_test_maskOrigin[:, 1].clone()
+                except:
+                    data_test_mask = data_test_maskOrigin.clone()
+
         # if args.CustomizeMask:
         #     data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
         stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
@@ -514,10 +516,10 @@ if __name__ == "__main__":
 
         if args.MakeImbalance:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+                        make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
         else:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
+                        keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
 
         train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
         labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
@@ -537,30 +539,24 @@ if __name__ == "__main__":
             neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
                                                        device)
 
-        #     #################################
-        #     # Train/Validation/Test
-        #     #################################
-        test_accSHA = test_bacc = test_f1 = 0.0
-
-        # from GraphSHA
         best_val_acc_f1 = 0
         saliency, prev_out = None, None
-
-
-        for epoch in tqdm.tqdm(range(args.epoch)):
-            #****__________________________________________________
-            train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin,
-                                     data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out,
-                                     out_weight, SparseEdges, edge_weight)
+        test_acc, test_bacc, test_f1 = 0.0, 0.0, 0.0
+        CountNotImproved = 0
+        for epoch in tqdm(range(args.epoch)):
+            num_features= train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight)
             accs, baccs, f1s = test()
-            train_accSHA, val_accSHA, tmp_test_acc = accs
+            train_acc, val_acc, tmp_test_acc = accs
             train_f1, val_f1, tmp_test_f1 = f1s
-            val_acc_f1 = (val_accSHA + val_f1) / 2.
+            val_acc_f1 = (val_acc + val_f1) / 2.
             if val_acc_f1 > best_val_acc_f1:
                 best_val_acc_f1 = val_acc_f1
-                test_accSHA = accs[2]
+                test_acc = accs[2]
                 test_bacc = baccs[2]
                 test_f1 = f1s[2]
+            else:
+                CountNotImproved += 1
+
 
         if args.IsDirectedData:
             dataset_to_print = args.Direct_dataset
@@ -568,7 +564,7 @@ if __name__ == "__main__":
             dataset_to_print = args.undirect_dataset
         print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
               args.epoch)
-        print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_accSHA * 100,
+        print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_acc * 100,
                                                                                                      test_bacc * 100,
                                                                                                      test_f1 * 100))
     # main(args)

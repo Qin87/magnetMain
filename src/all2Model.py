@@ -396,9 +396,6 @@ def Uni_VarData(args):
     print("data_x", data_x.shape)  # [11701, 300])
 
     data_y = data_y.long()
-    # n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
-    # n_cls = torch.tensor(n_cls).to(device)
-    # print("Number of classes: ", n_cls)
 
     return data, data_x, data_y, edges, dataset_num_features,data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight
 
@@ -437,40 +434,19 @@ if __name__ == "__main__":
 
     date_time = datetime.now().strftime('%y-%m-%d-%H:%M')
     print(date_time)
-    if args.IsDirectedData:
-        excel_file_path = str(args.AugDirect) +'Aug_' + date_time + '_'+ args.method_name + '_' + args.Direct_dataset.split('/')[
-            0]+args.Direct_dataset.split('/')[
-            1]  +'_dir.xlsx'
-    else:
-        excel_file_path = str(args.AugDirect)+'Aug_' + args.method_name + '_' + args.undirect_dataset + date_time + '_undir.xlsx'
-    print("\nThis is ", excel_file_path)
-
-    torch.cuda.empty_cache()
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    torch.backends.cudnn.deterministic = True
-    torch.backends.cudnn.benchmark = False
-    random.seed(seed)
-    np.random.seed(seed)
 
     global class_num_list, idx_info, prev_out, sample_times
     global data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin  # data split: train, validation, test
 
-    # if args.to_undirected:
-    #     data.edge_index = to_undirected(data.edge_index)
-
-    criterion = CrossEntropy().to(device)
-
-
     data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight = Uni_VarData(args)
+
+
 
     edge_in = None
     in_weight = None
     edge_out = None
     out_weight = None
 
-    if args.method_name == 'SymDiGCN':
-        data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),data.edge_weight)
     if args.method_name == 'APPNP' or 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
         edge_index1 = edge_index1.to(device)
@@ -486,7 +462,12 @@ if __name__ == "__main__":
             SparseEdges = edge_index1
             edge_weight = edge_weights1
         del edge_index1, edge_weights1
-
+    elif args.method_name == 'SymDiGCN':
+        data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                                                                             data_y.size(-1),
+                                                                             data.edge_weight)
+    else:
+        pass
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
     print("data_x", data_x.shape)  # [11701, 300])
@@ -499,7 +480,11 @@ if __name__ == "__main__":
     model = CreatModel()
     model = model.to(device)
     criterion = CrossEntropy().to(device)
-
+    try:
+        opt = torch.optim.Adam([dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0),], lr=args.lr)
+    except:
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100, verbose=False)
     try:
         splits = data_train_maskOrigin.shape[1]
         print("splits", splits)
@@ -507,14 +492,8 @@ if __name__ == "__main__":
             data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
     except IndexError:
         splits = 1
-
-    try:
-        opt = torch.optim.Adam([dict(params=model.reg_params, weight_decay=5e-4), dict(params=model.non_reg_params, weight_decay=0),], lr=args.lr)
-    except:
-        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100, verbose=False)
-
     for split in range(splits):
+        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
         if splits == 1:
             data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
                                                               data_val_maskOrigin.clone(),
@@ -533,8 +512,8 @@ if __name__ == "__main__":
                 except:
                     data_test_mask = data_test_maskOrigin.clone()
 
-        if args.CustomizeMask:
-            data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
+        # if args.CustomizeMask:
+        #     data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
         stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
         n_data = []  # num of train in each class
         for i in range(n_cls):
@@ -572,10 +551,6 @@ if __name__ == "__main__":
         test_acc, test_bacc, test_f1 = 0.0, 0.0, 0.0
         CountNotImproved = 0
         for epoch in tqdm(range(args.epoch)):
-            # # if CountNotImproved > 50:
-            # #     opt = torch.optim.Adam(model.parameters(), lr=10 * args.lr, weight_decay=args.l2)  # less accuracy*
-            # # else:
-            # opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
             num_features= train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight)
             accs, baccs, f1s = test()
             train_acc, val_acc, tmp_test_acc = accs
