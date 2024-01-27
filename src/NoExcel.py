@@ -37,6 +37,247 @@ from layer.geometric_baselines import *
 from torch_geometric.utils import to_undirected
 from utils.edge_data import get_appr_directed_adj, get_second_directed_adj
 
+def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight):
+    global class_num_list, idx_info, prev_out
+    global data_train_mask, data_val_mask, data_test_mask
+    model.train()
+    model.to(device)
+    opt.zero_grad()  # clear the gradients of the model's parameters.
+
+    if args.AugDirect == 0:
+        if args.method_name == 'SymDiGCN':
+            try:
+                out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+            except:
+                model.to('cpu')
+                data_x = data_x.to('cpu')
+                edges = edges.to('cpu')
+                edge_in = edge_in.to('cpu')
+                edge_out = edge_out.to('cpu')
+                in_weight = in_weight.to('cpu')
+                out_weight = out_weight.to('cpu')
+                out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                # model.to(device)
+                # data_x = data_x.to(device)
+                # edges = edges.to(device)
+                # edge_in = edge_in.to(device)
+                # edge_out = edge_out.to(device)
+                # in_weight = in_weight.to(device)
+                # out_weight = out_weight.to(device)
+
+        elif args.method_name == 'DiG':
+            out = model(data_x, SparseEdges, edge_weight)
+        else:
+            out = model(data_x, edges)
+        criterion(out[data_train_mask], data_y[data_train_mask]).backward()
+    else:  # with Aug
+        neighbor_dist_list.to(device)
+        if epoch > args.warmup:
+            # identifying source samples
+            prev_out_local = prev_out[train_idx]
+            sampling_src_idx, sampling_dst_idx = sampling_node_source(class_num_list, prev_out_local,
+                                                                      idx_info_local, train_idx, args.tau,
+                                                                      args.max, args.no_mask)
+            if args.AugDirect == 1:
+                new_edge_index = neighbor_sampling(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx,
+                                                   neighbor_dist_list)
+            elif args.AugDirect == -1:
+                new_edge_index = neighbor_sampling_reverse(data_x.size(0), edges[:, train_edge_mask],
+                                                           sampling_src_idx,
+                                                           neighbor_dist_list)
+            elif args.AugDirect == 2:
+                new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
+                                                          sampling_src_idx, neighbor_dist_list)
+            elif args.AugDirect == 4:
+                new_edge_index = neighbor_sampling_BiEdge_bidegree(data_x.size(0), edges[:, train_edge_mask],
+                                                                   sampling_src_idx, neighbor_dist_list)
+            elif args.AugDirect == 20:
+                new_edge_index = neighbor_sampling_bidegree(data_x.size(0), edges[:, train_edge_mask],
+                                                            sampling_src_idx,
+                                                            neighbor_dist_list)  # has two types
+            elif args.AugDirect == 21:
+                new_edge_index = neighbor_sampling_bidegreeOrigin(data_x.size(0), edges[:, train_edge_mask],
+                                                                  sampling_src_idx, neighbor_dist_list)
+            elif args.AugDirect == 22:
+                new_edge_index = neighbor_sampling_bidegree_variant1(data_x.size(0), edges[:, train_edge_mask],
+                                                                     sampling_src_idx, neighbor_dist_list)
+            elif args.AugDirect == 23:
+                new_edge_index = neighbor_sampling_bidegree_variant2(data_x.size(0), edges[:, train_edge_mask],
+                                                                     sampling_src_idx, neighbor_dist_list)
+
+            else:
+                raise NotImplementedError("Not Listed Aug Type")
+
+            beta = torch.distributions.beta.Beta(1, 100)
+            lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
+            new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
+
+            add_num = new_x.shape[0] - data_x.shape[0]  # Ben
+            new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+            new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
+            new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+            data_y = data_y.to(device)
+            _new_y = data_y[sampling_src_idx.long()].clone()
+            new_y = torch.cat((data_y, _new_y), dim=0)  #
+
+            # get edge_weight
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
+                                                               new_y.size(-1), new_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),
+                                                                     new_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                new_SparseEdges = (edge_index1, edge_index2)
+                new_edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                new_SparseEdges = edge_index1
+                new_edge_weight = edge_weights1
+            del edge_index1, edge_weights1
+
+        else:  # within warm up
+            sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
+            beta = torch.distributions.beta.Beta(2, 2)
+            lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
+            sampling_src_idx = sampling_src_idx.to(device)  # Ben for GPU
+            data_x = data_x.to(device)
+            edges = edges.to(device)
+            new_edge_index = duplicate_neighbor(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx)
+            new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
+
+            add_num = len(sampling_src_idx)  # Ben
+            new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+            new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
+            new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
+            data_y = data_y.to(device)
+            _new_y = data_y[sampling_src_idx].clone()
+            new_y = torch.cat((data_y, _new_y), dim=0)  #
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
+                                                               new_y.size(-1), new_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1), new_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                new_SparseEdges = (edge_index1, edge_index2)
+                new_edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                new_SparseEdges = edge_index1
+                new_edge_weight = edge_weights1
+            del edge_index1, edge_weights1
+
+        sampling_src_idx = sampling_src_idx.to(torch.long).to(data_y.device)  # Ben for GPU error
+        _new_y = data_y[sampling_src_idx].clone()
+        new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
+
+        Sym_edges = torch.cat([edges, new_edge_index], dim=1)
+        Sym_edges = torch.unique(Sym_edges, dim=1)
+        Sym_new_y = torch.cat((data_y, _new_y), dim=0)
+        if args.method_name == 'SymDiGCN':
+            data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),data.edge_weight)  # all edge and all y, not only train
+        elif args.method_name == 'APPNP' or 'DiG':
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                new_SparseEdges = (edge_index1, edge_index2)
+                edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                new_SparseEdges = edge_index1
+                edge_weight = edge_weights1
+            del edge_index1, edge_weights1
+        else:
+            pass
+
+        if args.method_name == 'SymDiGCN':
+            try:
+                out = model(new_x, Sym_edges, edge_in, in_weight, edge_out, out_weight)  # all edges(aug+all edges)
+            except:
+                model.to('cpu')
+                new_x = new_x.to('cpu')
+                Sym_edges = Sym_edges.to('cpu')
+                edge_in = edge_in.to('cpu')
+                edge_out = edge_out.to('cpu')
+                in_weight = in_weight.to('cpu')
+                out_weight = out_weight.to('cpu')
+                out = model(new_x, Sym_edges, edge_in, in_weight, edge_out, out_weight)
+                model.to(device)
+                new_x = new_x.to(device)
+                Sym_edges = Sym_edges.to(device)
+                edge_in = edge_in.to(device)
+                edge_out = edge_out.to(device)
+                in_weight = in_weight.to(device)
+                out_weight = out_weight.to(device)
+        elif args.method_name == 'DiG':
+            out = model(new_x, new_SparseEdges, edge_weight)  # all data+ aug
+        else:
+            out = model(new_x, Sym_edges)   # all data + aug
+        prev_out = (out[:data_x.size(0)]).detach().clone()
+        add_num = out.shape[0] - data_train_mask.shape[0]
+        new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
+        data_train_mask = data_train_mask.to(new_train_mask.device)
+        new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
+
+        criterion(out[new_train_mask], new_y).backward()
+    torch.cuda.empty_cache()
+    with torch.no_grad():  # only original data in validation, no augmented data
+        model.eval()
+        if args.method_name == 'SymDiGCN':
+            data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1), data.edge_weight)  # all original data, no augmented data
+            try:
+                out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+            except:
+                model.to('cpu')
+                data_x = data_x.to('cpu')
+                edges = edges.to('cpu')
+                edge_in = edge_in.to('cpu')
+                edge_out = edge_out.to('cpu')
+                in_weight = in_weight.to('cpu')
+                out_weight = out_weight.to('cpu')
+                out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
+                model.to(device)
+                data_x = data_x.to(device)
+                edges = edges.to(device)
+                edge_in = edge_in.to(device)
+                edge_out = edge_out.to(device)
+                in_weight = in_weight.to(device)
+                out_weight = out_weight.to(device)
+
+        elif args.method_name == 'DiG':
+            # must keep this, don't know why, but will be error without it----to analysis it later
+            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
+            edge_index1 = edge_index1.to(device)
+            edge_weights1 = edge_weights1.to(device)
+            if args.method_name[-2:] == 'ib':
+                edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
+                edge_index2 = edge_index2.to(device)
+                edge_weights2 = edge_weights2.to(device)
+                SparseEdges = (edge_index1, edge_index2)
+                edge_weight = (edge_weights1, edge_weights2)
+                del edge_index2, edge_weights2
+            else:
+                SparseEdges = edge_index1
+                edge_weight = edge_weights1
+            del edge_index1, edge_weights1
+
+            out = model(data_x, SparseEdges, edge_weight)
+        else:
+            # out = model(data_x, edges[:, train_edge_mask])
+            out = model(data_x, edges)
+        # out = model(data.x, data.edge_index[:, train_edge_mask])
+        val_loss = F.cross_entropy(out[data_val_mask], data.y[data_val_mask])
+    opt.step()
+    scheduler.step(val_loss)
+
 def CreatModel(num_features, n_cls, data_x):
     if args.method_name == 'GAT':
         model = create_gat(nfeat=num_features, nhid=args.feat_dim, nclass=n_cls, dropout=0.5,
@@ -77,405 +318,6 @@ def CreatModel(num_features, n_cls, data_x):
     except:
         pass
     return model
-
-def main(args):
-    # ********************* write to excel
-    date_time = datetime.now().strftime('%m-%d-%H:%M')
-    print(date_time)
-    # ********************
-
-    data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight = Uni_VarData(args)
-    criterion = CrossEntropy().to(device)
-
-    try:
-        splits = data_train_maskOrigin.shape[1]
-        print("splits", splits)
-        if len(data_test_maskOrigin.shape) == 1:
-            data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
-    except IndexError:
-        splits = 1
-
-    if args.method_name == 'APPNP' or 'DiG':
-        edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
-        edge_index1 = edge_index1.to(device)
-        edge_weights1 = edge_weights1.to(device)
-        if args.method_name[-2:] == 'ib':
-            edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
-            edge_index2 = edge_index2.to(device)
-            edge_weights2 = edge_weights2.to(device)
-            SparseEdges = (edge_index1, edge_index2)
-            edge_weight = (edge_weights1, edge_weights2)
-            del edge_index2, edge_weights2
-        else:
-            SparseEdges = edge_index1
-            edge_weight = edge_weights1
-        del edge_index1, edge_weights1
-
-    data_y = data_y.long()
-    n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
-    n_cls = torch.tensor(n_cls).to(device)
-    print("Number of classes: ", n_cls)
-
-    model = CreatModel(num_features, n_cls, data_x)
-
-    for split in range(splits):
-        # if split >4:
-        #     continue
-        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
-        if splits == 1:
-            data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
-                                                              data_val_maskOrigin.clone(),
-                                                              data_test_maskOrigin.clone())
-        else:
-            try:
-                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
-                                                              data_val_maskOrigin[:, split].clone(),
-                                                              data_test_maskOrigin[:, split].clone())
-            except IndexError:
-                print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
-                data_train_mask, data_val_mask = (data_train_maskOrigin[:, split].clone(),data_val_maskOrigin[:, split].clone())
-                data_test_mask = data_test_maskOrigin[:, 1].clone()
-
-        if args.CustomizeMask:
-            data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
-        stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
-        n_data = []  # num of train in each class
-        for i in range(n_cls):
-            data_num = (stats == i).sum()
-            n_data.append(int(data_num.item()))
-        idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
-
-        if args.MakeImbalance:
-            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
-        else:
-            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
-
-        train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
-        labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
-        train_idx_list = train_idx.cpu().tolist()
-        local2global = {i: train_idx_list[i] for i in range(len(train_idx_list))}
-        global2local = dict([val, key] for key, val in local2global.items())
-        idx_info_list = [item.cpu().tolist() for item in idx_info]  # list of all train nodes for each class
-        idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
-                          idx_info_list]  # train nodes position inside train
-
-        train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
-        if args.gdc == 'ppr':
-            neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
-        elif args.gdc == 'hk':
-            neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
-        elif args.gdc == 'none':
-            neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
-                                                       device)
-
-        #     #################################
-        #     # Train/Validation/Test
-        #     #################################
-        test_accSHA = test_bacc = test_f1 = 0.0
-
-        # from GraphSHA
-        best_val_acc_f1 = 0
-        saliency, prev_out = None, None
-
-        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)  # less accuracy
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
-                                                               verbose=False)
-        for epoch in tqdm.tqdm(range(args.epoch)):
-            model.train()
-            model.to(device)
-            opt.zero_grad()  # clear the gradients of the model's parameters.
-
-            if args.AugDirect == 0:
-                if args.method_name == 'SymDiGCN':
-                    # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
-                    #                                                                      data_y.size(-1),
-                    #                                                                      data.edge_weight)
-                    try:
-                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                    except:
-                        model.to('cpu')
-                        data_x = data_x.to('cpu')
-                        edges = edges.to('cpu')
-                        edge_in = edge_in.to('cpu')
-                        edge_out = edge_out.to('cpu')
-                        in_weight = in_weight.to('cpu')
-                        out_weight = out_weight.to('cpu')
-                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                        # model.to(device)
-                        # data_x = data_x.to(device)
-                        # edges = edges.to(device)
-                        # edge_in = edge_in.to(device)
-                        # edge_out = edge_out.to(device)
-                        # in_weight = in_weight.to(device)
-                        # out_weight = out_weight.to(device)
-
-                elif args.method_name == 'DiG':
-                    out = model(data_x, SparseEdges, edge_weight)
-                else:
-                    out = model(data_x, edges)
-                criterion(out[data_train_mask], data_y[data_train_mask]).backward()
-            else: # with Aug
-                # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
-                neighbor_dist_list.to(device)
-                if epoch > args.warmup:
-                    # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU
-                    prev_out_local = prev_out[train_idx]
-                    sampling_src_idx, sampling_dst_idx = sampling_node_source(class_num_list, prev_out_local,
-                                                                              idx_info_local, train_idx, args.tau,
-                                                                              args.max, args.no_mask)
-                    if args.AugDirect == 1:
-                        new_edge_index = neighbor_sampling(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx,
-                                                           neighbor_dist_list)
-                    elif args.AugDirect == -1:
-                        new_edge_index = neighbor_sampling_reverse(data_x.size(0), edges[:, train_edge_mask],
-                                                                   sampling_src_idx,
-                                                                   neighbor_dist_list)
-                    elif args.AugDirect == 2:
-                        new_edge_index = neighbor_sampling_BiEdge(data_x.size(0), edges[:, train_edge_mask],
-                                                                  sampling_src_idx, neighbor_dist_list)
-                    elif args.AugDirect == 4:
-                        new_edge_index = neighbor_sampling_BiEdge_bidegree(data_x.size(0), edges[:, train_edge_mask],
-                                                                           sampling_src_idx, neighbor_dist_list)
-                    elif args.AugDirect == 20:
-                        new_edge_index = neighbor_sampling_bidegree(data_x.size(0), edges[:, train_edge_mask],
-                                                                    sampling_src_idx,
-                                                                    neighbor_dist_list)  # has two types
-                    elif args.AugDirect == 21:
-                        new_edge_index = neighbor_sampling_bidegreeOrigin(data_x.size(0), edges[:, train_edge_mask],
-                                                                          sampling_src_idx, neighbor_dist_list)
-                    elif args.AugDirect == 22:
-                        new_edge_index = neighbor_sampling_bidegree_variant1(data_x.size(0), edges[:, train_edge_mask],
-                                                                             sampling_src_idx, neighbor_dist_list)
-                    elif args.AugDirect == 23:
-                        new_edge_index = neighbor_sampling_bidegree_variant2(data_x.size(0), edges[:, train_edge_mask],
-                                                                             sampling_src_idx, neighbor_dist_list)
-
-                    else:
-                        raise NotImplementedError("Not Listed Aug Type")
-                    beta = torch.distributions.beta.Beta(1, 100)
-                    lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
-                    new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
-
-                    add_num = new_x.shape[0] - data_x.shape[0]  # Ben
-                    new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
-                    new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
-                    # new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
-                    new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0).cpu()  # for GPU
-                    _new_y = data_y[sampling_src_idx.long()].clone()
-                    new_y = torch.cat((data_y, _new_y), dim=0)  #
-
-                    # get edge_weight
-                    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
-                                                                       new_y.size(-1), new_x.dtype)
-                    edge_index1 = edge_index1.to(device)
-                    edge_weights1 = edge_weights1.to(device)
-                    if args.method_name[-2:] == 'ib':
-                        edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),
-                                                                             new_x.dtype)
-                        edge_index2 = edge_index2.to(device)
-                        edge_weights2 = edge_weights2.to(device)
-                        new_SparseEdges = (edge_index1, edge_index2)
-                        new_edge_weight = (edge_weights1, edge_weights2)
-                        del edge_index2, edge_weights2
-                    else:
-                        new_SparseEdges = edge_index1
-                        new_edge_weight = edge_weights1
-                    # print("edge_weight", new_edge_weight.shape, data.y.shape)
-                    del edge_index1, edge_weights1
-
-                else:  # within warm up
-                    # train_edge_mask = train_edge_mask.cpu()     # Ben for GPU, must here insert this
-                    sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
-                    # sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
-                    # sampling_dst_idx = sampling_dst_idx.cpu()
-                    beta = torch.distributions.beta.Beta(2, 2)
-                    lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
-                    sampling_src_idx = sampling_src_idx.to(device)      # Ben for GPU
-                    data_x = data_x.to(device)
-                    edges = edges.to(device)
-                    new_edge_index = duplicate_neighbor(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx)
-                    new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
-
-                    add_num = len(sampling_src_idx)  # Ben
-                    new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
-                    new_train_mask = new_train_mask.to(data_train_mask.device)      # Ben for GPU
-                    new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
-                    # sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
-                    data_y = data_y.to(device)
-                    _new_y = data_y[sampling_src_idx].clone()
-                    new_y = torch.cat((data_y, _new_y), dim=0)  #
-                    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
-                                                                       new_y.size(-1), new_x.dtype)
-                    edge_index1 = edge_index1.to(device)
-                    edge_weights1 = edge_weights1.to(device)
-                    if args.method_name[-2:] == 'ib':
-                        edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),new_x.dtype)
-                        edge_index2 = edge_index2.to(device)
-                        edge_weights2 = edge_weights2.to(device)
-                        new_SparseEdges = (edge_index1, edge_index2)
-                        new_edge_weight = (edge_weights1, edge_weights2)
-                        del edge_index2, edge_weights2
-                    else:
-                        new_SparseEdges = edge_index1
-                        new_edge_weight = edge_weights1
-                    del edge_index1, edge_weights1
-           # ----------------------------------------------------------------------------
-                sampling_src_idx = sampling_src_idx.to(torch.long).to(data_y.device)  # Ben for GPU error
-                _new_y = data_y[sampling_src_idx].clone()
-                new_y = torch.cat((data_y[data_train_mask], _new_y), dim=0)
-
-                Sym_edges = torch.cat([edges, new_edge_index], dim=1)
-                Sym_edges = torch.unique(Sym_edges, dim=1)
-                Sym_new_y = torch.cat((data_y, _new_y), dim=0)
-                if args.method_name == 'SymDiGCN':
-                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),
-                                                                                         data.edge_weight)  # all edge and all y, not only train
-                elif args.method_name == 'APPNP' or 'DiG':
-                    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1),
-                                                                       new_x.dtype)
-                    edge_index1 = edge_index1.to(device)
-                    edge_weights1 = edge_weights1.to(device)
-                    if args.method_name[-2:] == 'ib':
-                        edge_index2, edge_weights2 = get_second_directed_adj(Sym_edges.long(), Sym_new_y.size(-1),
-                                                                             new_x.dtype)
-                        edge_index2 = edge_index2.to(device)
-                        edge_weights2 = edge_weights2.to(device)
-                        new_SparseEdges = (edge_index1, edge_index2)
-                        edge_weight = (edge_weights1, edge_weights2)
-                        del edge_index2, edge_weights2
-                    else:
-                        new_SparseEdges = edge_index1
-                        edge_weight = edge_weights1
-                    del edge_index1, edge_weights1
-                else:
-                    pass
-
-                if args.method_name == 'SymDiGCN':
-                    try:
-                        out = model(new_x, Sym_edges, edge_in, in_weight, edge_out,
-                                    out_weight)  # all edges(aug+all edges)
-                    except:
-                        model.to('cpu')
-                        new_x = new_x.to('cpu')
-                        Sym_edges = Sym_edges.to('cpu')
-                        edge_in = edge_in.to('cpu')
-                        edge_out = edge_out.to('cpu')
-                        in_weight = in_weight.to('cpu')
-                        out_weight = out_weight.to('cpu')
-                        out = model(new_x, Sym_edges, edge_in, in_weight, edge_out, out_weight)
-                        model.to(device)
-                        new_x = new_x.to(device)
-                        Sym_edges = Sym_edges.to(device)
-                        edge_in = edge_in.to(device)
-                        edge_out = edge_out.to(device)
-                        in_weight = in_weight.to(device)
-                        out_weight = out_weight.to(device)
-
-
-                elif args.method_name == 'DiG':
-                    out = model(new_x, new_SparseEdges, edge_weight)  # all data+ aug
-                else:
-                    out = model(new_x, Sym_edges)  # all data + aug
-                prev_out = (out[:data_x.size(0)]).detach().clone()
-                add_num = out.shape[0] - data_train_mask.shape[0]
-                new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
-                data_train_mask = data_train_mask.to(new_train_mask.device)
-                new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)
-
-                criterion(out[new_train_mask], new_y).backward()
-            torch.cuda.empty_cache()
-            with torch.no_grad():  # only original data in validation, no augmented data
-                model.eval()
-                if args.method_name == 'SymDiGCN':
-                    data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),
-                                                                                         data.edge_weight)  # all original data, no augmented data
-                    try:
-                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                    except:
-                        model.to('cpu')
-                        data_x = data_x.to('cpu')
-                        edges = edges.to('cpu')
-                        edge_in = edge_in.to('cpu')
-                        edge_out = edge_out.to('cpu')
-                        in_weight = in_weight.to('cpu')
-                        out_weight = out_weight.to('cpu')
-                        out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
-                        model.to(device)
-                        data_x = data_x.to(device)
-                        edges = edges.to(device)
-                        edge_in = edge_in.to(device)
-                        edge_out = edge_out.to(device)
-                        in_weight = in_weight.to(device)
-                        out_weight = out_weight.to(device)
-
-                elif args.method_name == 'DiG':
-                    # must keep this, don't know why, but will be error without it----to analysis it later
-                    edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1),
-                                                                       data_x.dtype)
-                    edge_index1 = edge_index1.to(device)
-                    edge_weights1 = edge_weights1.to(device)
-                    if args.method_name[-2:] == 'ib':
-                        edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1),
-                                                                             data_x.dtype)
-                        edge_index2 = edge_index2.to(device)
-                        edge_weights2 = edge_weights2.to(device)
-                        SparseEdges = (edge_index1, edge_index2)
-                        edge_weight = (edge_weights1, edge_weights2)
-                        del edge_index2, edge_weights2
-                    else:
-                        SparseEdges = edge_index1
-                        edge_weight = edge_weights1
-                    del edge_index1, edge_weights1
-
-                    out = model(data_x, SparseEdges, edge_weight)
-                else:
-                    # out = model(data_x, edges[:, train_edge_mask])
-                    out = model(data_x, edges)
-                # out = model(data.x, data.edge_index[:, train_edge_mask])
-                val_loss = F.cross_entropy(out[data_val_mask], data.y[data_val_mask])
-            opt.step()
-            scheduler.step(val_loss)
-            # from graphSHA
-            # --------------------------
-            model.eval()
-            if args.method_name == 'SymDiGCN':
-                logits = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
-            elif args.method_name == 'DiG':
-                logits = model(data_x, SparseEdges, edge_weight)
-            else:
-                logits = model(data_x, edges[:, train_edge_mask])
-
-            accs, baccs, f1s = [], [], []
-            for mask in [data_train_mask, data_val_mask, data_test_mask]:
-                # print(mask.shape, logits.shape)  # torch.Size([3327, 1]) torch.Size([3327, 6])
-                pred = logits[mask].max(1)[1]
-                y_pred = pred.cpu().numpy()
-                y_true = data_y[mask].cpu().numpy()
-                acc_epoch = pred.eq(data_y[mask]).sum().item() / mask.sum().item()
-                bacc = balanced_accuracy_score(y_true, y_pred)
-                f1 = f1_score(y_true, y_pred, average='macro')
-                accs.append(acc_epoch)
-                baccs.append(bacc)
-                f1s.append(f1)
-                # ---------------------
-            train_accSHA, val_accSHA, tmp_test_acc = accs
-            train_f1, val_f1, tmp_test_f1 = f1s
-            val_acc_f1 = (val_accSHA + val_f1) / 2.
-            if val_acc_f1 > best_val_acc_f1:
-                best_val_acc_f1 = val_acc_f1
-                test_accSHA = accs[2]
-                test_bacc = baccs[2]
-                test_f1 = f1s[2]
-
-        if args.IsDirectedData:
-            dataset_to_print = args.Direct_dataset
-        else:
-            dataset_to_print = args.undirect_dataset
-
-        print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch", args.epoch)
-        print('split: {:3d}, val_loss: {:6.2f}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,val_loss, test_accSHA * 100, test_bacc * 100,test_f1 * 100))
 
 def Uni_VarData(args):
     if args.IsDirectedData:
@@ -559,6 +401,27 @@ def Uni_VarData(args):
 
     return data, data_x, data_y, edges, dataset_num_features,data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight
 
+def test():
+    model.eval()
+    if args.method_name == 'SymDiGCN':
+        logits = model(data_x, edges[:, train_edge_mask], edge_in, in_weight, edge_out, out_weight)
+    elif args.method_name == 'DiG':
+        logits = model(data_x, SparseEdges, edge_weight)
+    else:
+        logits = model(data_x, edges[:, train_edge_mask])
+    accs, baccs, f1s = [], [], []
+    for mask in [data_train_mask, data_val_mask, data_test_mask]:
+        pred = logits[mask].max(1)[1]
+        y_pred = pred.cpu().numpy()
+        y_true = data.y[mask].cpu().numpy()
+        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        bacc = balanced_accuracy_score(y_true, y_pred)
+        f1 = f1_score(y_true, y_pred, average='macro')
+        accs.append(acc)
+        baccs.append(bacc)
+        f1s.append(f1)
+    return accs, baccs, f1s
+
 if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
@@ -577,7 +440,138 @@ if __name__ == "__main__":
             print("CUDA is not available, using CPU.")
             device = torch.device("cpu")
 
-    main(args)
+    date_time = datetime.now().strftime('%m-%d-%H:%M')
+    print(date_time)
+
+    data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight = Uni_VarData(
+        args)
+    criterion = CrossEntropy().to(device)
+
+    try:
+        splits = data_train_maskOrigin.shape[1]
+        print("splits", splits)
+        if len(data_test_maskOrigin.shape) == 1:
+            data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
+    except IndexError:
+        splits = 1
+
+    if args.method_name == 'APPNP' or 'DiG':
+        edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
+        edge_index1 = edge_index1.to(device)
+        edge_weights1 = edge_weights1.to(device)
+        if args.method_name[-2:] == 'ib':
+            edge_index2, edge_weights2 = get_second_directed_adj(edges.long(), data_y.size(-1), data_x.dtype)
+            edge_index2 = edge_index2.to(device)
+            edge_weights2 = edge_weights2.to(device)
+            SparseEdges = (edge_index1, edge_index2)
+            edge_weight = (edge_weights1, edge_weights2)
+            del edge_index2, edge_weights2
+        else:
+            SparseEdges = edge_index1
+            edge_weight = edge_weights1
+        del edge_index1, edge_weights1
+    elif args.method_name == 'SymDiGCN':
+        data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
+                                                                             data_y.size(-1),
+                                                                             data.edge_weight)
+    else:
+        pass
+
+    data_y = data_y.long()
+    n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
+    n_cls = torch.tensor(n_cls).to(device)
+    print("Number of classes: ", n_cls)
+
+    model = CreatModel(num_features, n_cls, data_x)
+    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
+                                                           verbose=False)
+
+    for split in range(splits):
+        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
+        if splits == 1:
+            data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
+                                                              data_val_maskOrigin.clone(),
+                                                              data_test_maskOrigin.clone())
+        else:
+            try:
+                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
+                                                                  data_val_maskOrigin[:, split].clone(),
+                                                                  data_test_maskOrigin[:, split].clone())
+            except IndexError:
+                print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
+                data_train_mask, data_val_mask = (
+                data_train_maskOrigin[:, split].clone(), data_val_maskOrigin[:, split].clone())
+                data_test_mask = data_test_maskOrigin[:, 1].clone()
+        # if args.CustomizeMask:
+        #     data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
+        stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
+        n_data = []  # num of train in each class
+        for i in range(n_cls):
+            data_num = (stats == i).sum()
+            n_data.append(int(data_num.item()))
+        idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
+
+        if args.MakeImbalance:
+            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+        else:
+            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
+
+        train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
+        labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
+        train_idx_list = train_idx.cpu().tolist()
+        local2global = {i: train_idx_list[i] for i in range(len(train_idx_list))}
+        global2local = dict([val, key] for key, val in local2global.items())
+        idx_info_list = [item.cpu().tolist() for item in idx_info]  # list of all train nodes for each class
+        idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
+                          idx_info_list]  # train nodes position inside train
+
+        train_edge_mask = train_edge_mask.cpu()  # Ben for GPU
+        if args.gdc == 'ppr':
+            neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
+        elif args.gdc == 'hk':
+            neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
+        elif args.gdc == 'none':
+            neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
+                                                       device)
+
+        #     #################################
+        #     # Train/Validation/Test
+        #     #################################
+        test_accSHA = test_bacc = test_f1 = 0.0
+
+        # from GraphSHA
+        best_val_acc_f1 = 0
+        saliency, prev_out = None, None
+
+
+        for epoch in tqdm.tqdm(range(args.epoch)):
+            #****__________________________________________________
+            train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin,
+                                     data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out,
+                                     out_weight, SparseEdges, edge_weight)
+            accs, baccs, f1s = test()
+            train_accSHA, val_accSHA, tmp_test_acc = accs
+            train_f1, val_f1, tmp_test_f1 = f1s
+            val_acc_f1 = (val_accSHA + val_f1) / 2.
+            if val_acc_f1 > best_val_acc_f1:
+                best_val_acc_f1 = val_acc_f1
+                test_accSHA = accs[2]
+                test_bacc = baccs[2]
+                test_f1 = f1s[2]
+
+        if args.IsDirectedData:
+            dataset_to_print = args.Direct_dataset
+        else:
+            dataset_to_print = args.undirect_dataset
+        print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
+              args.epoch)
+        print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_accSHA * 100,
+                                                                                                     test_bacc * 100,
+                                                                                                     test_f1 * 100))
+    # main(args)
     end_sum_time = time.time()
     total_time = end_sum_time- start_sum_time
     print("Total time(all splits): ", total_time)
