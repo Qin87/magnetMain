@@ -424,18 +424,18 @@ if __name__ == "__main__":
     args = parse_args()
     print(args)
 
-    if args.method_name == 'DiG':
-        print("DiG always fail in cuda, using CPU.")
-        device = torch.device("cpu")
+    # if args.method_name == 'DiG':
+    #     print("DiG always fail in cuda, using CPU.")
+    #     device = torch.device("cpu")
+    # else:
+    cuda_device = args.GPUdevice
+    if torch.cuda.is_available():
+        print("CUDA Device Index:", cuda_device)
+        device = torch.device("cuda:%d" % cuda_device)
+        torch.cuda.set_device(device)
     else:
-        cuda_device = args.GPUdevice
-        if torch.cuda.is_available():
-            print("CUDA Device Index:", cuda_device)
-            device = torch.device("cuda:%d" % cuda_device)
-            torch.cuda.set_device(device)
-        else:
-            print("CUDA is not available, using CPU.")
-            device = torch.device("cpu")
+        print("CUDA is not available, using CPU.")
+        device = torch.device("cpu")
 
     date_time = datetime.now().strftime('%m-%d-%H:%M')
     print(date_time)
