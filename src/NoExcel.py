@@ -10,7 +10,7 @@ import time
 from openpyxl.reader.excel import load_workbook
 from sklearn.metrics import balanced_accuracy_score, f1_score
 import warnings
-import tqdm
+from tqdm import tqdm
 
 from layer.DGCN import SymModel
 from layer.DiGCN import DiModel, DiGCN_IB
@@ -444,6 +444,11 @@ if __name__ == "__main__":
         args)
 
 
+
+    edge_in = None
+    in_weight = None
+    edge_out = None
+    out_weight = None
 
     if args.method_name == 'APPNP' or 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
