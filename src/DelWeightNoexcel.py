@@ -119,23 +119,23 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
             _new_y = data_y[sampling_src_idx.long()].clone()
             new_y = torch.cat((data_y, _new_y), dim=0)  #
 
-            # get edge_weight
-            edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
-                                                               new_y.size(-1), new_x.dtype)
-            edge_index1 = edge_index1.to(device)
-            edge_weights1 = edge_weights1.to(device)
-            if args.method_name[-2:] == 'ib':
-                edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),
-                                                                     new_x.dtype)
-                edge_index2 = edge_index2.to(device)
-                edge_weights2 = edge_weights2.to(device)
-                new_SparseEdges = (edge_index1, edge_index2)
-                new_edge_weight = (edge_weights1, edge_weights2)
-                del edge_index2, edge_weights2
-            else:
-                new_SparseEdges = edge_index1
-                new_edge_weight = edge_weights1
-            del edge_index1, edge_weights1
+            # # get edge_weight
+            # edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, new_edge_index.long(),
+            #                                                    new_y.size(-1), new_x.dtype)
+            # edge_index1 = edge_index1.to(device)
+            # edge_weights1 = edge_weights1.to(device)
+            # if args.method_name[-2:] == 'ib':
+            #     edge_index2, edge_weights2 = get_second_directed_adj(new_edge_index.long(), new_y.size(-1),
+            #                                                          new_x.dtype)
+            #     edge_index2 = edge_index2.to(device)
+            #     edge_weights2 = edge_weights2.to(device)
+            #     new_SparseEdges = (edge_index1, edge_index2)
+            #     new_edge_weight = (edge_weights1, edge_weights2)
+            #     del edge_index2, edge_weights2
+            # else:
+            #     new_SparseEdges = edge_index1
+            #     new_edge_weight = edge_weights1
+            # del edge_index1, edge_weights1
 
         else:  # within warm up
             sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
@@ -567,7 +567,6 @@ if __name__ == "__main__":
         print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_acc * 100,
                                                                                                      test_bacc * 100,
                                                                                                      test_f1 * 100))
-    # main(args)
     end_sum_time = time.time()
     total_time = end_sum_time- start_sum_time
     print("Total time(all splits): ", total_time)
