@@ -806,7 +806,7 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     """
     # print("Warmup: ", class_num_list, np.shape(class_num_list))  #  [14, 0, 1, 45, 4] (5,)
     # Selecting src & dst nodes
-    print("device is ", device)
+    # print("device is ", device)
     max_num, n_cls = max(class_num_list), len(class_num_list)
     sampling_list = max_num * torch.ones(n_cls) - torch.tensor(class_num_list)
     # print(sampling_list)    # tensor([307., 334., 183.,   0., 268., 326., 338.])
@@ -862,7 +862,7 @@ def sampling_idx_individual_dst(class_num_list, idx_info, device):
     sampling_src_idx, sorted_idx = torch.sort(sampling_src_idx)
     sampling_src_idx = sampling_src_idx.to(device)
     sorted_idx = sorted_idx.to(sampling_dst_idx.device)      # Ben in case for GPU
-    print(sampling_dst_idx.device)  # cpu
+    # print(sampling_dst_idx.device)  # cpu
     sampling_dst_idx = sampling_dst_idx[sorted_idx]
     # print(sampling_src_idx, sampling_dst_idx)
 

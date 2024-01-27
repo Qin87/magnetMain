@@ -88,9 +88,6 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
 
     if args.AugDirect == 0:
         if args.method_name == 'SymDiGCN':
-            data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges,
-                                                                                 data_y.size(-1),
-                                                                                 data.edge_weight)
             try:
                 out = model(data_x, edges, edge_in, in_weight, edge_out, out_weight)
             except:
@@ -179,14 +176,12 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
             else:
                 new_SparseEdges = edge_index1
                 new_edge_weight = edge_weights1
-            # print("edge_weight", new_edge_weight.shape, data.y.shape)
             del edge_index1, edge_weights1
 
         else:
             sampling_src_idx, sampling_dst_idx = sampling_idx_individual_dst(class_num_list, idx_info, device)
             beta = torch.distributions.beta.Beta(2, 2)
             lam = beta.sample((len(sampling_src_idx),)).unsqueeze(1)
-            # new_edge_index = duplicate_neighbor(data_x.size(0), data.edge_index[:, train_edge_mask], sampling_src_idx)
             new_edge_index = duplicate_neighbor(data_x.size(0), edges[:, train_edge_mask], sampling_src_idx)
             # new_edge_index = duplicate_neighbor(data_x.size(0), data.edge_index, sampling_src_idx)
             new_x = saliency_mixup(data_x, sampling_src_idx, sampling_dst_idx, lam)
@@ -195,7 +190,6 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
             new_train_mask = torch.ones(add_num, dtype=torch.bool, device=data_x.device)
             new_train_mask = new_train_mask.to(data_train_mask.device)  # Ben for GPU
             new_train_mask = torch.cat((data_train_mask, new_train_mask), dim=0)  # add some train nodes
-            # sampling_src_idx = sampling_src_idx.cpu()  # Ben for GPU
             data_y = data_y.to(device)
             _new_y = data_y[sampling_src_idx].clone()
             new_y = torch.cat((data_y, _new_y), dim=0)  #
@@ -224,13 +218,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
         Sym_edges = torch.unique(Sym_edges, dim=1)
         Sym_new_y = torch.cat((data_y, _new_y), dim=0)
         if args.method_name == 'SymDiGCN':
-            # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(edges, data_y.size(-1),
-            #                                                                      data.edge_weight)
-
             data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),data.edge_weight)  # all edge and all y, not only train
-
-            # data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(new_edge_index, new_y.size(-1),data.edge_weight)
-
         elif args.method_name == 'APPNP' or 'DiG':
             edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
             edge_index1 = edge_index1.to(device)
@@ -250,9 +238,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
             pass
 
         if args.method_name == 'SymDiGCN':
-
             try:
-                # out = model(new_x, new_edge_index, edge_in, in_weight, edge_out, out_weight)
                 out = model(new_x, Sym_edges, edge_in, in_weight, edge_out, out_weight)  # all edges(aug+all edges)
             except:
                 model.to('cpu')
@@ -270,12 +256,9 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
                 edge_out = edge_out.to(device)
                 in_weight = in_weight.to(device)
                 out_weight = out_weight.to(device)
-
-
         elif args.method_name == 'DiG':
             out = model(new_x, new_SparseEdges, edge_weight)  # all data+ aug
         else:
-            # out = model(new_x, new_edge_index)   # all train data + aug
             out = model(new_x, Sym_edges)   # all data + aug
         prev_out = (out[:data_x.size(0)]).detach().clone()
         add_num = out.shape[0] - data_train_mask.shape[0]
