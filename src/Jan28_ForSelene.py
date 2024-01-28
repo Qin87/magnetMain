@@ -349,14 +349,12 @@ def Uni_VarData(args):
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat'].to(device)
-        # dataset_num_features = data_x.shape[1].to(device)
         dataset_num_features = torch.tensor(data_x.shape[1]).to(device)
-
     elif not args.IsDirectedData and args.undirect_dataset in ['Coauthor-CS', 'Amazon-Computers', 'Amazon-Photo']:
         edges = data.edge_index.to(device)  # for torch_geometric librar
         data_y = data.y.to(device)
         data_x = data.x.to(device)
-        dataset_num_features = dataset.num_features.to(device)
+        dataset_num_features = torch.tensor(dataset.num_features).to(device)
 
         data_y = data_y.long()
         n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
@@ -426,6 +424,12 @@ if __name__ == "__main__":
     print(args)
     date_time = datetime.now().strftime('%m-%d-%H:%M')
     print(date_time)
+
+    if args.IsDirectedData:
+        dataset_to_print = args.Direct_dataset.split('/')[0]+'_'+args.Direct_dataset.split('/')[1] if len(args.Direct_dataset.split('/')) > 1 else \
+        args.Direct_dataset.split('/')[0]
+    else:
+        dataset_to_print = args.undirect_dataset
 
     cuda_device = args.GPUdevice
     if torch.cuda.is_available():
@@ -558,11 +562,6 @@ if __name__ == "__main__":
             else:
                 CountNotImproved += 1
 
-
-        if args.IsDirectedData:
-            dataset_to_print = args.Direct_dataset
-        else:
-            dataset_to_print = args.undirect_dataset
         print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
               args.epoch)
         print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_acc * 100,

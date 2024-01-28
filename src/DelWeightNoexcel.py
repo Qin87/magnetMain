@@ -344,18 +344,17 @@ def Uni_VarData(args):
 
     # copy GraphSHA
     if args.IsDirectedData and args.Direct_dataset.split('/')[0].startswith('dgl'):
-        edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0)
-        data_y = data.ndata['label']
+        edges = torch.cat((data.edges()[0].unsqueeze(0), data.edges()[1].unsqueeze(0)), dim=0).to(device)
+        data_y = data.ndata['label'].to(device)
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
-        data_x = data.ndata['feat']
-        dataset_num_features = data_x.shape[1]
-    # elif not args.IsDirectedData and args.undirect_dataset in ['Coauthor-CS', 'Amazon-Computers', 'Amazon-Photo']:
+        data_x = data.ndata['feat'].to(device)
+        dataset_num_features = torch.tensor(data_x.shape[1]).to(device)
     elif not args.IsDirectedData and args.undirect_dataset in ['Coauthor-CS', 'Amazon-Computers', 'Amazon-Photo']:
-        edges = data.edge_index  # for torch_geometric librar
-        data_y = data.y
-        data_x = data.x
-        dataset_num_features = dataset.num_features
+        edges = data.edge_index.to(device)  # for torch_geometric librar
+        data_y = data.y.to(device)
+        data_x = data.x.to(device)
+        dataset_num_features = torch.tensor(dataset.num_features).to(device)
 
         data_y = data_y.long()
         n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
@@ -380,14 +379,15 @@ def Uni_VarData(args):
         class_num_list = [len(item) for item in train_node]
         idx_info = [torch.tensor(item) for item in train_node]
     else:
-        edges = data.edge_index  # for torch_geometric librar
-        data_y = data.y
-        data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (data.train_mask.clone(), data.val_mask.clone(),data.test_mask.clone())
-        data_x = data.x
+        edges = data.edge_index.to(device)  # for torch_geometric librar
+        data_y = data.y.to(device)
+        data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (data.train_mask.clone().to(device), data.val_mask.clone().to(device),data.test_mask.clone().to(device))
+        data_x = data.x.to(device)
         try:
-            dataset_num_features = dataset.num_features
+            dataset_num_features = torch.tensor(dataset.num_features).to(device)
         except:
-            dataset_num_features = data_x.shape[1]
+            dataset_num_features = torch.tensor(data_x.shape[1]).to(device)
+
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
@@ -425,14 +425,24 @@ if __name__ == "__main__":
     date_time = datetime.now().strftime('%m-%d-%H:%M')
     print(date_time)
 
-    # Get the desired log file name from the user
-    log_file_name = input("Enter the log file name (without extension): ")
+    if args.IsDirectedData:
+        dataset_to_print = args.Direct_dataset.split('/')[0]+'_'+args.Direct_dataset.split('/')[1] if len(args.Direct_dataset.split('/')) > 1 else \
+        args.Direct_dataset.split('/')[0]
+    else:
+        dataset_to_print = args.undirect_dataset
+    log_file_name = dataset_to_print+args.method_name+'_Aug'+str(args.AugDirect)+'_lr'+str(args.lr)+'_l2'+str(args.l2)+'_epoch'+str(args.epoch)
     # Add a timestamp to the log file name to make it unique
     timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
     log_file_name_with_timestamp = f"{log_file_name}_{timestamp}.log"
 
+    log_directory = "~/Documents/Benlogs/"  # Change this to your desired directory
+    log_directory = os.path.expanduser(log_directory)
+
+    # Ensure the directory exists, create it if necessary
+    os.makedirs(log_directory, exist_ok=True)
+
     # Redirect print output to the log file
-    with open(log_file_name_with_timestamp, 'w') as log_file:
+    with open(log_directory+log_file_name_with_timestamp, 'w') as log_file:
         print("Redirecting output to:", log_file_name_with_timestamp)
         print("Hello, this is a test message.", file=log_file)
 
@@ -554,7 +564,8 @@ if __name__ == "__main__":
         saliency, prev_out = None, None
         test_acc, test_bacc, test_f1 = 0.0, 0.0, 0.0
         CountNotImproved = 0
-        for epoch in tqdm(range(args.epoch)):
+        # for epoch in tqdm(range(args.epoch)):
+        for epoch in range(args.epoch):
             num_features= train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight)
             accs, baccs, f1s = test()
             train_acc, val_acc, tmp_test_acc = accs
@@ -567,12 +578,10 @@ if __name__ == "__main__":
                 test_f1 = f1s[2]
             else:
                 CountNotImproved += 1
+            print('epoch: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch, test_acc * 100,
+                                                                                                 test_bacc * 100,
+                                                                                                 test_f1 * 100))
 
-
-        if args.IsDirectedData:
-            dataset_to_print = args.Direct_dataset
-        else:
-            dataset_to_print = args.undirect_dataset
         print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
               args.epoch)
         print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_acc * 100,
