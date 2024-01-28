@@ -349,7 +349,9 @@ def Uni_VarData(args):
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (
             data.ndata['train_mask'].clone(), data.ndata['val_mask'].clone(), data.ndata['test_mask'].clone())
         data_x = data.ndata['feat'].to(device)
-        dataset_num_features = data_x.shape[1].to(device)
+        # dataset_num_features = data_x.shape[1].to(device)
+        dataset_num_features = torch.tensor(data_x.shape[1]).to(device)
+
     elif not args.IsDirectedData and args.undirect_dataset in ['Coauthor-CS', 'Amazon-Computers', 'Amazon-Photo']:
         edges = data.edge_index.to(device)  # for torch_geometric librar
         data_y = data.y.to(device)
