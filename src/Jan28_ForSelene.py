@@ -386,9 +386,10 @@ def Uni_VarData(args):
         data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin = (data.train_mask.clone().to(device), data.val_mask.clone().to(device),data.test_mask.clone().to(device))
         data_x = data.x.to(device)
         try:
-            dataset_num_features = dataset.num_features.to(device)
+            dataset_num_features = torch.tensor(dataset.num_features).to(device)
         except:
-            dataset_num_features = data_x.shape[1].to(device)
+            dataset_num_features = torch.tensor(data_x.shape[1]).to(device)
+
 
     IsDirectedGraph = test_directed(edges)
     print("This is directed graph: ", IsDirectedGraph)
