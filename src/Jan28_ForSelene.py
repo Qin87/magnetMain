@@ -273,7 +273,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
             # out = model(data_x, edges[:, train_edge_mask])
             out = model(data_x, edges)
         # out = model(data.x, data.edge_index[:, train_edge_mask])
-        val_loss = F.cross_entropy(out[data_val_mask], data.y[data_val_mask])
+        val_loss = F.cross_entropy(out[data_val_mask], data_y[data_val_mask])
     opt.step()
     scheduler.step(val_loss)
 
@@ -409,8 +409,8 @@ def test():
     for mask in [data_train_mask, data_val_mask, data_test_mask]:
         pred = logits[mask].max(1)[1]
         y_pred = pred.cpu().numpy()
-        y_true = data.y[mask].cpu().numpy()
-        acc = pred.eq(data.y[mask]).sum().item() / mask.sum().item()
+        y_true = data_y[mask].cpu().numpy()
+        acc = pred.eq(data_y[mask]).sum().item() / mask.sum().item()
         bacc = balanced_accuracy_score(y_true, y_pred)
         f1 = f1_score(y_true, y_pred, average='macro')
         accs.append(acc)
