@@ -449,7 +449,7 @@ def generate_masks(data_y, minClassTrain, ratio_val2train):
         train_mask[train_indices] = True
         val_mask[val_indices] = True
         test_mask[test_indices] = True
-    print(torch.sum(train_mask), torch.sum(val_mask), torch.sum(test_mask))
+    # print(torch.sum(train_mask), torch.sum(val_mask), torch.sum(test_mask))
     return train_mask, val_mask, test_mask
 
 def generate_masksRatio(data_y, TrainRatio, ValRatio):
