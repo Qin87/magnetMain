@@ -154,7 +154,7 @@ def neighbor_sampling_reverse(total_node, edge_index, sampling_src_idx,
 
     # Find the nearest nodes and mix target pool
     neighbor_dist_list = neighbor_dist_list.to(device)  # Ben for GPU
-    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx].to(device)
+    mixed_neighbor_dist = neighbor_dist_list[sampling_src_idx.long()].to(device)
 
     # Compute degree
     col = edge_index[1]

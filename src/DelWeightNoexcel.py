@@ -421,9 +421,6 @@ def test():
 if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
-    print(args)
-    date_time = datetime.now().strftime('%m-%d-%H:%M')
-    print(date_time)
 
     if args.IsDirectedData:
         dataset_to_print = args.Direct_dataset.split('/')[0]+'_'+args.Direct_dataset.split('/')[1] if len(args.Direct_dataset.split('/')) > 1 else \
@@ -440,12 +437,6 @@ if __name__ == "__main__":
 
     # Ensure the directory exists, create it if necessary
     os.makedirs(log_directory, exist_ok=True)
-
-    # Redirect print output to the log file
-    with open(log_directory+log_file_name_with_timestamp, 'w') as log_file:
-        print("Redirecting output to:", log_file_name_with_timestamp)
-        print("Hello, this is a test message.", file=log_file)
-
 
     cuda_device = args.GPUdevice
     if torch.cuda.is_available():
@@ -488,106 +479,120 @@ if __name__ == "__main__":
     else:
         pass
 
-    data_y = data_y.long()
-    n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
-    n_cls = torch.tensor(n_cls).to(device)
-    print("Number of classes: ", n_cls)
+    with open(log_directory + log_file_name_with_timestamp, 'w') as log_file:
+        print(args, file=log_file)
+        date_time = datetime.now().strftime('%m-%d-%H:%M')
+        print(date_time, file=log_file)
+        print("Redirecting output to:", log_file_name_with_timestamp)
+        print("Hello, this is a test message.", file=log_file)
+        data_y = data_y.long()
+        n_cls = (data_y.max() - data_y.min() + 1).cpu().numpy()
+        n_cls = torch.tensor(n_cls).to(device)
+        print("Number of classes: ", n_cls, file=log_file)
 
-    model = CreatModel(num_features, n_cls, data_x)
-    model = model.to(device)
-    criterion = CrossEntropy().to(device)
-    opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
-    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
-                                                           verbose=False)
-    try:
-        splits = data_train_maskOrigin.shape[1]
-        print("splits", splits)
-        if len(data_test_maskOrigin.shape) == 1:
-            data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
-    except IndexError:
-        splits = 1
-    for split in range(splits):
-        print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
-        if splits == 1:
-            data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
-                                                              data_val_maskOrigin.clone(),
-                                                              data_test_maskOrigin.clone())
-        else:
-            try:
-                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
-                                                                  data_val_maskOrigin[:, split].clone(),
-                                                                  data_test_maskOrigin[:, split].clone())
-            except IndexError:
-                print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
-                data_train_mask, data_val_mask = (
-                data_train_maskOrigin[:, split].clone(), data_val_maskOrigin[:, split].clone())
-                try:
-                    data_test_mask = data_test_maskOrigin[:, 1].clone()
-                except:
-                    data_test_mask = data_test_maskOrigin.clone()
-
-        # if args.CustomizeMask:
-        #     data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
-        stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
-        n_data = []  # num of train in each class
-        for i in range(n_cls):
-            data_num = (stats == i).sum()
-            n_data.append(int(data_num.item()))
-        idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
-
-        if args.MakeImbalance:
-            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                        make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
-        else:
-            class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                        keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
-
-        train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
-        labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
-        train_idx_list = train_idx.cpu().tolist()
-        local2global = {i: train_idx_list[i] for i in range(len(train_idx_list))}
-        global2local = dict([val, key] for key, val in local2global.items())
-        idx_info_list = [item.cpu().tolist() for item in idx_info]  # list of all train nodes for each class
-        idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
-                          idx_info_list]  # train nodes position inside train
-
-        train_edge_mask = train_edge_mask.cpu()  # Ben for GPU
-        if args.gdc == 'ppr':
-            neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
-        elif args.gdc == 'hk':
-            neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
-        elif args.gdc == 'none':
-            neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
-                                                       device)
-
-        best_val_acc_f1 = 0
-        saliency, prev_out = None, None
-        test_acc, test_bacc, test_f1 = 0.0, 0.0, 0.0
-        CountNotImproved = 0
-        # for epoch in tqdm(range(args.epoch)):
-        for epoch in range(args.epoch):
-            num_features= train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight)
-            accs, baccs, f1s = test()
-            train_acc, val_acc, tmp_test_acc = accs
-            train_f1, val_f1, tmp_test_f1 = f1s
-            val_acc_f1 = (val_acc + val_f1) / 2.
-            if val_acc_f1 > best_val_acc_f1:
-                best_val_acc_f1 = val_acc_f1
-                test_acc = accs[2]
-                test_bacc = baccs[2]
-                test_f1 = f1s[2]
+        model = CreatModel(num_features, n_cls, data_x)
+        model = model.to(device)
+        criterion = CrossEntropy().to(device)
+        opt = torch.optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.l2)
+        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(opt, mode='min', factor=0.5, patience=100,
+                                                               verbose=False)
+        try:
+            splits = data_train_maskOrigin.shape[1]
+            print("splits", splits)
+            if len(data_test_maskOrigin.shape) == 1:
+                data_test_maskOrigin = data_test_maskOrigin.unsqueeze(1).repeat(1, splits)
+        except IndexError:
+            splits = 1
+        for split in range(splits):
+            print("Beginning for split: ", split, datetime.now().strftime('%d-%H:%M:%S'))
+            if splits == 1:
+                data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin.clone(),
+                                                                  data_val_maskOrigin.clone(),
+                                                                  data_test_maskOrigin.clone())
             else:
-                CountNotImproved += 1
-            print('epoch: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch, test_acc * 100,
+                try:
+                    data_train_mask, data_val_mask, data_test_mask = (data_train_maskOrigin[:, split].clone(),
+                                                                      data_val_maskOrigin[:, split].clone(),
+                                                                      data_test_maskOrigin[:, split].clone())
+                except IndexError:
+                    print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape, file=log_file)
+                    data_train_mask, data_val_mask = (
+                    data_train_maskOrigin[:, split].clone(), data_val_maskOrigin[:, split].clone())
+                    try:
+                        data_test_mask = data_test_maskOrigin[:, 1].clone()
+                    except:
+                        data_test_mask = data_test_maskOrigin.clone()
+
+            # if args.CustomizeMask:
+            #     data_train_mask, data_val_mask, data_test_mask = generate_masksRatio(data_y, TrainRatio=0.3, ValRatio=0.3)
+            stats = data_y[data_train_mask]  # this is selected y. only train nodes of y
+            n_data = []  # num of train in each class
+            for i in range(n_cls):
+                data_num = (stats == i).sum()
+                n_data.append(int(data_num.item()))
+            idx_info = get_idx_info(data_y, n_cls, data_train_mask)  # torch: all train nodes for each class
+
+            if args.MakeImbalance:
+                class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                            make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+            else:
+                class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
+                            keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
+
+            train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
+            labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
+            train_idx_list = train_idx.cpu().tolist()
+            local2global = {i: train_idx_list[i] for i in range(len(train_idx_list))}
+            global2local = dict([val, key] for key, val in local2global.items())
+            idx_info_list = [item.cpu().tolist() for item in idx_info]  # list of all train nodes for each class
+            idx_info_local = [torch.tensor(list(map(global2local.get, cls_idx))) for cls_idx in
+                              idx_info_list]  # train nodes position inside train
+
+            train_edge_mask = train_edge_mask.cpu()  # Ben for GPU
+            if args.gdc == 'ppr':
+                neighbor_dist_list = get_PPR_adj(data_x, edges[:, train_edge_mask], alpha=0.05, k=128, eps=None)
+            elif args.gdc == 'hk':
+                neighbor_dist_list = get_heat_adj(data_x, edges[:, train_edge_mask], t=5.0, k=None, eps=0.0001)
+            elif args.gdc == 'none':
+                neighbor_dist_list = get_ins_neighbor_dist(data_y.size(0), edges[:, train_edge_mask], data_train_mask,
+                                                           device)
+
+            best_val_acc_f1 = 0
+            saliency, prev_out = None, None
+            test_acc, test_bacc, test_f1 = 0.0, 0.0, 0.0
+            CountNotImproved = 0
+            # for epoch in tqdm(range(args.epoch)):
+            for epoch in range(args.epoch):
+                num_features= train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, edge_in, in_weight, edge_out, out_weight, SparseEdges, edge_weight)
+                accs, baccs, f1s = test()
+                train_acc, val_acc, tmp_test_acc = accs
+                train_f1, val_f1, tmp_test_f1 = f1s
+                val_acc_f1 = (val_acc + val_f1) / 2.
+                if val_acc_f1 > best_val_acc_f1:
+                    best_val_acc_f1 = val_acc_f1
+                    test_acc = accs[2]
+                    test_bacc = baccs[2]
+                    test_f1 = f1s[2]
+                else:
+                    CountNotImproved += 1
+                print('epoch: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(epoch, test_acc * 100,
+                                                                                                     test_bacc * 100,
+                                                                                                     test_f1 * 100), file=log_file)
+
+            print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
+                  args.epoch, file=log_file)
+            print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_acc * 100,
+                                                                                                         test_bacc * 100,
+                                                                                                         test_f1 * 100), file=log_file)
+            print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
+                  args.epoch)
+            print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split, test_acc * 100,
                                                                                                  test_bacc * 100,
                                                                                                  test_f1 * 100))
-
-        print(args.method_name, dataset_to_print, "imb_ratio", args.imb_ratio, "Aug", str(args.AugDirect), "epoch",
-              args.epoch)
-        print('split: {:3d}, test_Acc: {:6.2f}, test_bacc: {:6.2f}, test_f1: {:6.2f}'.format(split,test_acc * 100,
-                                                                                                     test_bacc * 100,
-                                                                                                     test_f1 * 100))
     end_sum_time = time.time()
     total_time = end_sum_time- start_sum_time
-    print("Total time(all splits): ", total_time)
+    print("Total time(all splits): ", total_time, file=log_file)
+
+
     print("This message will be redirected to the log file.")
+
