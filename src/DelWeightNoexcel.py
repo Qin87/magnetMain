@@ -438,8 +438,6 @@ if __name__ == "__main__":
     data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight = Uni_VarData(
         args)
 
-
-
     edge_in = None
     in_weight = None
     edge_out = None
