@@ -179,7 +179,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
         Sym_new_y = torch.cat((data_y, _new_y), dim=0)
         if args.method_name == 'SymDiGCN':
             data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),data.edge_weight)  # all edge and all y, not only train
-        elif args.method_name == 'APPNP' or 'DiG':
+        elif args.method_name == 'APPNP' or args.method_name == 'DiG':
             edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
             edge_index1 = edge_index1.to(device)
             edge_weights1 = edge_weights1.to(device)
@@ -422,6 +422,20 @@ if __name__ == "__main__":
     start_sum_time = time.time()
     args = parse_args()
     print(args)
+    date_time = datetime.now().strftime('%m-%d-%H:%M')
+    print(date_time)
+
+    # Get the desired log file name from the user
+    log_file_name = input("Enter the log file name (without extension): ")
+    # Add a timestamp to the log file name to make it unique
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    log_file_name_with_timestamp = f"{log_file_name}_{timestamp}.log"
+
+    # Redirect print output to the log file
+    with open(log_file_name_with_timestamp, 'w') as log_file:
+        print("Redirecting output to:", log_file_name_with_timestamp)
+        print("Hello, this is a test message.", file=log_file)
+
 
     cuda_device = args.GPUdevice
     if torch.cuda.is_available():
@@ -432,9 +446,6 @@ if __name__ == "__main__":
         print("CUDA is not available, using CPU.")
         device = torch.device("cpu")
 
-    date_time = datetime.now().strftime('%m-%d-%H:%M')
-    print(date_time)
-
     data, data_x, data_y, edges, num_features, data_train_maskOrigin, data_val_maskOrigin, data_test_maskOrigin, data.edge_weight = Uni_VarData(
         args)
 
@@ -442,8 +453,10 @@ if __name__ == "__main__":
     in_weight = None
     edge_out = None
     out_weight = None
+    SparseEdges = None
+    edge_weight = None
 
-    if args.method_name == 'APPNP' or 'DiG':
+    if args.method_name == 'APPNP' or args.method_name == 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
         edge_index1 = edge_index1.to(device)
         edge_weights1 = edge_weights1.to(device)
@@ -568,3 +581,4 @@ if __name__ == "__main__":
     end_sum_time = time.time()
     total_time = end_sum_time- start_sum_time
     print("Total time(all splits): ", total_time)
+    print("This message will be redirected to the log file.")

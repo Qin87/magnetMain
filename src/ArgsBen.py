@@ -6,10 +6,10 @@ def parse_args():
     # choices=["baseline--graph attention.", "baseline--Digraph"]
 
     # change frequently
-    parser.add_argument('--AugDirect', type=int, default=23
+    parser.add_argument('--AugDirect', type=int, default=22
                         , help='1 for one direction, 2 for bidirection aug edges, '
                                                                  '4 for bidegree and bidirection, 20 for my bidegree(best), 21 for graphSHA bidegree')
-    parser.add_argument('--method_name', type=str, default='DiG', help='method name')   # Tested OK: APPNP, SymDiGCN
+    parser.add_argument('--method_name', type=str, default='SymDiGCN', help='method name')   # Tested OK: APPNP, SymDiGCN
     parser.add_argument('--GPUdevice', type=int, default=1, help='gpu 0,1,2 for selene')
 
     # change less frequentl
@@ -44,8 +44,15 @@ def parse_args():
     parser.add_argument('--new_setting', '-NS', action='store_true', help='whether not to load best settings')
 
     parser.add_argument('--layer', type=int, default=2, help='number of layers (2 or 3), default: 2')
+
+    # parser.add_argument('--lr', type=float, default=5e-3, help='learning rate')
+    # parser.add_argument('--l2', type=float, default=5e-4, help='l2 regularizer')
+
     parser.add_argument('--lr', type=float, default=5e-2, help='learning rate')
     parser.add_argument('--l2', type=float, default=5e-3, help='l2 regularizer')
+
+    # parser.add_argument('--lr', type=float, default=5e-1, help='learning rate')
+    # parser.add_argument('--l2', type=float, default=5e-2, help='l2 regularizer')
     # parser.add_argument('-to_undirected', '-tud', action='store_true', help='if convert graph to undirecteds')
     parser.add_argument('--alpha', type=float, default=0.1, help='alpha teleport prob')
     parser.add_argument('--randomseed', type=int, default=-1, help='if set random seed in training')

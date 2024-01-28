@@ -179,7 +179,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
         Sym_new_y = torch.cat((data_y, _new_y), dim=0)
         if args.method_name == 'SymDiGCN':
             data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),data.edge_weight)  # all edge and all y, not only train
-        elif args.method_name == 'APPNP' or 'DiG':
+        elif args.method_name == 'APPNP' or args.method_name == 'DiG':
             edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
             edge_index1 = edge_index1.to(device)
             edge_weights1 = edge_weights1.to(device)
@@ -431,6 +431,12 @@ if __name__ == "__main__":
     else:
         print("CUDA is not available, using CPU.")
         device = torch.device("cpu")
+    edge_in = None
+    in_weight = None
+    edge_out = None
+    out_weight = None
+    SparseEdges = None
+    edge_weight = None
 
     date_time = datetime.now().strftime('%m-%d-%H:%M')
     print(date_time)
@@ -440,12 +446,9 @@ if __name__ == "__main__":
 
 
 
-    edge_in = None
-    in_weight = None
-    edge_out = None
-    out_weight = None
 
-    if args.method_name == 'APPNP' or 'DiG':
+
+    if args.method_name == 'APPNP' or args.method_name == 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
         edge_index1 = edge_index1.to(device)
         edge_weights1 = edge_weights1.to(device)

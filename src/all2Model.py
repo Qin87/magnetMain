@@ -180,7 +180,7 @@ def train_val(data, data_x, data_y, edges, num_features, data_train_maskOrigin, 
         Sym_new_y = torch.cat((data_y, _new_y), dim=0)
         if args.method_name == 'SymDiGCN':
             data.edge_index, edge_in, in_weight, edge_out, out_weight = F_in_out(Sym_edges, Sym_new_y.size(-1),data.edge_weight)  # all edge and all y, not only train
-        elif args.method_name == 'APPNP' or 'DiG':
+        elif args.method_name == 'APPNP' or args.method_name == 'DiG':
             edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, Sym_edges.long(), Sym_new_y.size(-1), new_x.dtype)
             edge_index1 = edge_index1.to(device)
             edge_weights1 = edge_weights1.to(device)
@@ -432,6 +432,13 @@ if __name__ == "__main__":
         print("CUDA is not available, using CPU.")
         device = torch.device("cpu")
 
+    edge_in = None
+    in_weight = None
+    edge_out = None
+    out_weight = None
+    SparseEdges = None
+    edge_weight = None
+
     date_time = datetime.now().strftime('%y-%m-%d-%H:%M')
     print(date_time)
 
@@ -442,12 +449,7 @@ if __name__ == "__main__":
 
 
 
-    edge_in = None
-    in_weight = None
-    edge_out = None
-    out_weight = None
-
-    if args.method_name == 'APPNP' or 'DiG':
+    if args.method_name == 'APPNP' or args.method_name == 'DiG':
         edge_index1, edge_weights1 = get_appr_directed_adj(args.alpha, edges.long(), data_y.size(-1), data_x.dtype)
         edge_index1 = edge_index1.to(device)
         edge_weights1 = edge_weights1.to(device)
@@ -506,7 +508,7 @@ if __name__ == "__main__":
             except IndexError:
                 print("testIndex ,", data_test_mask.shape, data_train_mask.shape, data_val_mask.shape)
                 data_train_mask, data_val_mask = (
-                data_train_maskOrigin[:, split].clone(), data_val_maskOrigin[:, split].clone())
+                    data_train_maskOrigin[:, split].clone(), data_val_maskOrigin[:, split].clone())
                 try:
                     data_test_mask = data_test_maskOrigin[:, 1].clone()
                 except:
@@ -523,10 +525,10 @@ if __name__ == "__main__":
 
         if args.MakeImbalance:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                        make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
+                make_longtailed_data_remove(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask.clone())
         else:
             class_num_list, data_train_mask, idx_info, train_node_mask, train_edge_mask = \
-                        keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
+                keep_all_data(edges, data_y, n_data, n_cls, args.imb_ratio, data_train_mask)
 
         train_idx = data_train_mask.nonzero().squeeze()  # get the index of training data
         labels_local = data_y.view([-1])[train_idx]  # view([-1]) is "flattening" the tensor.
@@ -563,7 +565,6 @@ if __name__ == "__main__":
                 test_f1 = f1s[2]
             else:
                 CountNotImproved += 1
-
 
         if args.IsDirectedData:
             dataset_to_print = args.Direct_dataset
