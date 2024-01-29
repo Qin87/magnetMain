@@ -44,7 +44,7 @@ class SAGEConv(MessagePassing):
     """
     def __init__(self, in_channels: Union[int, Tuple[int, int]],
                  out_channels: int, normalize: bool = False,
-                 root_weight: bool = True,
+                 root_weight: bool = False,     # Ben
                  bias: bool = True, **kwargs):  # yapf: disable
         kwargs.setdefault('aggr', 'mean')
         super(SAGEConv, self).__init__(**kwargs)
@@ -62,10 +62,8 @@ class SAGEConv(MessagePassing):
             self.lin_l = Linear(in_channels.item(), out_channels, bias=bias)
 
         if self.root_weight:
-            try:
-                self.temp_weight = Linear(in_channels[1], out_channels, bias=False)
-            except:  #Ben
-                pass
+            self.temp_weight = Linear(in_channels[1], out_channels, bias=False)
+
 
         self.reset_parameters()
 
