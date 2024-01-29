@@ -62,7 +62,10 @@ class SAGEConv(MessagePassing):
             self.lin_l = Linear(in_channels.item(), out_channels, bias=bias)
 
         if self.root_weight:
-            self.temp_weight = Linear(in_channels[1], out_channels, bias=False)
+            try:
+                self.temp_weight = Linear(in_channels[1], out_channels, bias=False)
+            except:  #Ben
+                pass
 
         self.reset_parameters()
 
