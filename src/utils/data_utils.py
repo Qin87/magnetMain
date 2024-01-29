@@ -143,25 +143,11 @@ def get_dataset(name, path, split_type='public'):
 
     return dataset
 
-
-def get_idx_info(label, n_cls, train_mask):
-    """
-
-    :param label: class
-    :param n_cls:
-    :param train_mask:
-    :return:# all the sample for training that belongs to each class.
-    """
-    index_list = torch.arange(len(label))   # [0,1,2...]
+def get_idx_info(label, n_cls, train_mask, device):
+    index_list = torch.arange(len(label)).to(device)
     idx_info = []
-    # device_type = label.device  # Ben for GPU run
     for i in range(n_cls):
-        label = label.cpu()  # Ben for GPU run
-        train_mask = train_mask.cpu()
-        cls_indices = index_list[((label == i) & train_mask)]
-        # creating a boolean mask by comparing elements of label with the value i
-        # and then performing element-wise logical AND operation with train_mask.
-        # print("cls_indices is ", cls_indices)   # it's a tensor
+        cls_indices = index_list[((label == i) & train_mask).to(device)]
         idx_info.append(cls_indices)
     return idx_info
 
