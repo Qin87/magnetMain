@@ -56,8 +56,11 @@ class SAGEConv(MessagePassing):
 
         if isinstance(in_channels, int):
             in_channels = (in_channels, in_channels)
+        try:
+            self.lin_l = Linear(in_channels[0], out_channels, bias=bias)
+        except: # Ben for invalid index of a 0-dim tensor.
+            self.lin_l = Linear(in_channels.item(), out_channels, bias=bias)
 
-        self.lin_l = Linear(in_channels[0], out_channels, bias=bias)
         if self.root_weight:
             self.temp_weight = Linear(in_channels[1], out_channels, bias=False)
 
@@ -115,7 +118,7 @@ class GraphSAGE1(nn.Module):
 
 
 class GraphSAGE2(nn.Module):
-    def __init__(self, nfeat, nhid, nclass, dropout,nlayer=2):
+    def __init__(self, nfeat, nhid, nclass, dropout, nlayer=2):
         super(GraphSAGE2, self).__init__()
         self.conv1 = SAGEConv(nfeat, nhid)
         self.conv2 = SAGEConv(nhid, nclass)

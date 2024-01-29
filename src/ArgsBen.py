@@ -14,7 +14,7 @@ def parse_args():
 
     # change less frequentl
     parser.add_argument('--IsDirectedData', type=bool, default=True, help='the dataset is directed graph')
-    parser.add_argument('--Direct_dataset', type=str, default='cora_ml/', help='dgl/cora, ##citeseer_npz/, WebKB/texas')
+    parser.add_argument('--Direct_dataset', type=str, default='WikiCS/', help='dgl/cora, ##citeseer_npz/, WebKB/texas')
     parser.add_argument('--undirect_dataset', type=str,
                         choices=['Cora', 'CiteSeer', 'PubMed', 'Amazon-Photo', 'Amazon-Computers', 'Coauthor-CS'],
                         default='Amazon-Photo', help='data set selection as GraphSHA')

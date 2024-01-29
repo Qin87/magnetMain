@@ -81,8 +81,13 @@ class GATConv(MessagePassing):
             self.lin_l = self.temp_weight#Linear(in_channels, heads * out_channels, bias=False)
             self.lin_r = self.lin_l
         else:
-            self.lin_l = torch.nn.Linear(in_channels[0], heads * out_channels, False)
-            self.lin_r = torch.nn.Linear(in_channels[1], heads * out_channels, False)
+            try:
+                self.lin_l = torch.nn.Linear(in_channels[0], heads * out_channels, False)
+                self.lin_r = torch.nn.Linear(in_channels[1], heads * out_channels, False)
+            except:  # Ben for IndexError: invalid index of a 0-dim tensor
+                self.lin_l = torch.nn.Linear(in_channels, heads * out_channels, False)
+                self.lin_r = torch.nn.Linear(in_channels, heads * out_channels, False)
+
 
         self.att_l = Parameter(torch.Tensor(1, heads, out_channels))
         self.att_r = Parameter(torch.Tensor(1, heads, out_channels))
