@@ -181,7 +181,7 @@ def keep_all_data(edge_index, label, n_data, n_cls, ratio, train_mask):
 
     return class_num_list, data_train_mask, idx_info, train_node_mask, edge_mask
 
-def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_mask):
+def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_mask, device):
     """
 
     :param edge_index: all edges in the graph
@@ -240,22 +240,15 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
     remove_idx_list = [[] for _ in range(n_cls)]
     # print(remove_idx_list)  # [[], [], [], [], [], [], []]
     cls_idx_list = []   # nodes belong to class i
-    index_list = torch.arange(len(train_mask))
+    index_list = torch.arange(len(train_mask)).to(device)
     original_mask = train_mask.clone()
-    label = label.cpu()
-    original_mask = original_mask.cpu()
     for i in range(n_cls):
         cls_idx_list.append(index_list[(label == i) & original_mask])
-    if torch.cuda.is_available():
-        cls_idx_list = [tensor.cuda() for tensor in cls_idx_list]  # Ben for GPU
-    else:
-        pass
+
     for i in indices.numpy():
         for r in range(1, n_round[i]+1):
             # Find removed nodes
             node_mask = label.new_ones(label.size(), dtype=torch.bool)
-            if torch.cuda.is_available():
-                node_mask = node_mask.cuda()  # Ben for GPU
             # new_ones is a PyTorch function used to create a new tensor of ones with the specified shape and data type.
             # print("Initialize all true: ", node_mask[:10])
             node_mask[sum(remove_idx_list, [])] = False
@@ -263,8 +256,6 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
 
             # Remove connection with removed nodes
             row, col = edge_index[0], edge_index[1]
-            row = row.cpu()  # Ben for GPU
-            col = col.cpu()
             # print("row is ", row.shape, row[:10])
             # # torch.Size([10556]) tensor([0, 0, 0, 1, 1, 1, 2, 2, 2, 2])
             # print("col is ", row.shape, col[:10])
@@ -272,38 +263,26 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
             row_mask = node_mask[row]
             col_mask = node_mask[col]
             edge_mask = row_mask & col_mask  # elementwise "and"
-            edge_mask = edge_mask.cpu()  # Ben for GPU
 
             # Compute degree
             degree = scatter_add(torch.ones_like(col[edge_mask]), col[edge_mask], dim_size=label.size(0)).to(row.device)
-            if torch.cuda.is_available():       # Ben for GPU
-                degree = degree.cuda()
             degree = degree[cls_idx_list[i]]
             _, remove_idx = torch.topk(degree, (r*remove_class_num_list[i])//n_round[i], largest=False)
-            remove_idx = remove_idx.cpu()       # # Ben for GPU
             remove_idx = cls_idx_list[i][remove_idx]
 
-            remove_idx = remove_idx.cpu()       # # Ben for GPU for the next line!
-            # remove_idx_list[i] = list(remove_idx.cpu().numpy())
-            remove_idx_list[i] = list(remove_idx.numpy())
+            # remove_idx_list[i] = list(remove_idx.numpy())
+            remove_idx_list[i] = list(remove_idx.cpu().numpy())     # Ben for GPU
 
     # Find removed nodes
     node_mask = label.new_ones(label.size(), dtype=torch.bool)
-    if torch.cuda.is_available():
-        node_mask = node_mask.cuda()  # Ben for GPU
     node_mask[sum(remove_idx_list, [])] = False
 
     # Remove connection with removed nodes
     row, col = edge_index[0], edge_index[1]
-    row = row.cpu()  # Ben for GPU
-    col = col.cpu()
     row_mask = node_mask[row]
     col_mask = node_mask[col]
     edge_mask = row_mask & col_mask
 
-    label = label.cpu()     # Ben for GPU
-    train_mask = train_mask.cpu()
-    node_mask = node_mask.cpu()
     train_mask = node_mask & train_mask
     idx_info = []
     for i in range(n_cls):
@@ -311,7 +290,6 @@ def make_longtailed_data_remove(edge_index, label, n_data, n_cls, ratio, train_m
         idx_info.append(cls_indices)
 
     return list(class_num_list), train_mask, idx_info, node_mask, edge_mask
-
 
 def get_step_split(imb_ratio, valid_each, labeling_ratio, all_idx, all_label, nclass):
     """
